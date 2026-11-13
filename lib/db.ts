@@ -6,26 +6,42 @@ import { seedDatabase } from "./seed";
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "store.json");
 
+const seed = seedDatabase();
+
 async function ensureDb() {
   try {
     await fs.access(DB_PATH);
+    return;
   } catch {
+    // Ignore: the file may not exist yet (e.g. fresh deploy).
+  }
+  try {
     await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(DB_PATH, JSON.stringify(seedDatabase(), null, 2), "utf8");
+    await fs.writeFile(DB_PATH, JSON.stringify(seed, null, 2), "utf8");
+  } catch {
+    // Read-only filesystem (e.g. Vercel): fall back to in-memory seed.
   }
 }
 
 export async function readDb(): Promise<Database> {
   await ensureDb();
-  const raw = await fs.readFile(DB_PATH, "utf8");
-  return JSON.parse(raw) as Database;
+  try {
+    const raw = await fs.readFile(DB_PATH, "utf8");
+    return JSON.parse(raw) as Database;
+  } catch {
+    return seed;
+  }
 }
 
 async function writeDb(db: Database) {
   await ensureDb();
-  const tmp = `${DB_PATH}.${process.pid}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf8");
-  await fs.rename(tmp, DB_PATH);
+  try {
+    const tmp = `${DB_PATH}.${process.pid}.tmp`;
+    await fs.writeFile(tmp, JSON.stringify(db, null, 2), "utf8");
+    await fs.rename(tmp, DB_PATH);
+  } catch {
+    // Writes don't persist on read-only filesystems; ignore.
+  }
 }
 
 let queue: Promise<unknown> = Promise.resolve();
