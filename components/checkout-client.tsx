@@ -41,13 +41,13 @@ export function CheckoutClient() {
   const [error, setError] = useState("");
 
   const validate = () => {
-    const next: { [key: string]: string } = {};
-    if (!form.name.trim()) next.name = "Jina linalohusika";
-    if (!form.phone.trim()) next.phone = "Namba ya simu linalohusika";
-    if (!form.location.trim()) next.location = "Mahali ulio linalohusika";
-    if (!form.quantity.trim() || Number(form.quantity) < 1) next.quantity = "Idadi linalohusika";
-    setError(next);
-    return Object.keys(next).length === 0;
+    const errors: string[] = [];
+    if (!form.name.trim()) errors.push("Jina linalohusika");
+    if (!form.phone.trim()) errors.push("Namba ya simu linalohusika");
+    if (!form.location.trim()) errors.push("Mahali ulio linalohusika");
+    if (!form.quantity.trim() || Number(form.quantity) < 1) errors.push("Idadi linalohusika");
+    setError(errors.join(", "));
+    return errors.length === 0;
   };
 
   const submit = async (event: React.FormEvent) => {
