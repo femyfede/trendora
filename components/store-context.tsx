@@ -82,7 +82,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [currency, setCurrencyState] = useState<Currency>("TZS");
-  const [language, setLanguageState] = useState<Language>("en");
+  const [language, setLanguageState] = useState<Language>("sw");
   const [discount, setDiscount] = useState<Discount | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
