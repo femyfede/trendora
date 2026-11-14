@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/components/store-context";
 
@@ -204,7 +205,6 @@ export function CheckoutClient() {
               className="field mt-1.5"
               type="number"
               min="1"
-              value={form.quantity}
               required
             />
             <p className="text-[10px] text-zinc-400">
