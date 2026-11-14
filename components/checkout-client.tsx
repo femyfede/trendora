@@ -46,7 +46,7 @@ export function CheckoutClient() {
     if (!form.phone.trim()) next.phone = "Namba ya simu linalohusika";
     if (!form.location.trim()) next.location = "Mahali ulio linalohusika";
     if (!form.quantity.trim() || Number(form.quantity) < 1) next.quantity = "Idadi linalohusika";
-    setErrors(next);
+    setError(next);
     return Object.keys(next).length === 0;
   };
 
