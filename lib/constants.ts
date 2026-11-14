@@ -20,8 +20,8 @@ export const CURRENCIES: { value: Currency; label: string }[] = [
 ];
 
 export const LANGUAGES: { value: Language; label: string }[] = [
-  { value: "en", label: "English" },
-  { value: "sw", label: "Kiswahili" }
+  { value: "sw", label: "Kiswahili" },
+  { value: "en", label: "English" }
 ];
 
 export const CATEGORIES: {
@@ -32,56 +32,56 @@ export const CATEGORIES: {
 }[] = [
   {
     value: "Women",
-    label: "Women's Clothing",
+    label: "Nguo za Wanawake",
     swLabel: "Nguo za Wanawake",
     image:
-      "https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?auto=format&fit=crop&w=600&q=80"
+      "https://images.unsplash.com/photo-1575206383204-ba39a1b8cbe5?auto=format&fit=crop&w=600&q=80"
   },
   {
     value: "Men",
-    label: "Men's Clothing",
+    label: "Nguo za Wanaume",
     swLabel: "Nguo za Wanaume",
     image:
-      "https://images.unsplash.com/photo-1485462537746-965f33f7f6a7?auto=format&fit=crop&w=600&q=80"
+      "https://images.unsplash.com/photo-1507473885790-e6c9a6a02f5b?auto=format&fit=crop&w=600&q=80"
   },
   {
     value: "Crop Tops",
-    label: "Crop Tops",
-    swLabel: "Kropi Tops",
+    label: "Kropi Tops",
+    swLabel: "Vipande vya kuongeza",
     image:
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=600&q=80"
+      "https://images.unsplash.com/photo-1520417593131-1c1b9a07c0ba?auto=format&fit=crop&w=600&q=80"
   },
   {
     value: "Dresses",
-    label: "Dresses",
+    label: "Magauni",
     swLabel: "Magauni",
     image:
       "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=600&q=80"
   },
   {
     value: "Swimwear",
-    label: "Swimwear",
-    swLabel: "Nguo za Kuogelea",
+    label: "Nguo za Kuogelea",
+    swLabel: "Vifaa vya samaki",
     image:
-      "https://images.unsplash.com/photo-1570976447640-ac859083963f?auto=format&fit=crop&w=600&q=80"
+      "https://images.unsplash.com/photo-1606107557195-30543607dbf5?auto=format&fit=crop&w=600&q=80"
   },
   {
     value: "Shoes",
-    label: "Shoes",
+    label: "Viatu",
     swLabel: "Viatu",
     image:
       "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=600&q=80"
   },
   {
     value: "Accessories",
-    label: "Accessories",
-    swLabel: "Vifaa",
+    label: "Vifaa vya Kipekee",
+    swLabel: "Vifaa vya kujibu hisa",
     image:
       "https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=600&q=80"
   },
   {
     value: "Bags",
-    label: "Bags",
+    label: "Mikoba",
     swLabel: "Mikoba",
     image:
       "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=600&q=80"
@@ -181,7 +181,7 @@ export const HERO_SLIDES = [
     titleKey: "hero.title",
     subKey: "hero.sub",
     image:
-      "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1400&q=85",
+      "https://images.unsplash.com/photo-1575206383204-ba39a1b8cbe5?auto=format&fit=crop&w=1400&q=85",
     noteKey: "hero.note"
   },
   {
