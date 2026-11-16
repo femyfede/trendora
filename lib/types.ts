@@ -139,6 +139,64 @@ export type ContactMessage = {
   createdAt: string;
 };
 
+export type ShopApplication = {
+  id: string;
+  shopName: string;
+  ownerName: string;
+  phone: string;
+  whatsapp?: string;
+  email?: string;
+  category: string;
+  description: string;
+  region: string;
+  district: string;
+  physicalLocation: string;
+  status: "PENDING_PAYMENT" | "PAYMENT_PROCESSING" | "PENDING_APPROVAL" | "ACTIVE" | "REJECTED" | "SUSPENDED" | "EXPIRED";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Shop = {
+  id: string;
+  name: string;
+  ownerName: string;
+  phone: string;
+  whatsapp?: string;
+  email?: string;
+  category: string;
+  description: string;
+  region: string;
+  district: string;
+  physicalLocation: string;
+  logo?: string;
+  coverImage?: string;
+  status: "PENDING_PAYMENT" | "PAYMENT_PROCESSING" | "PENDING_APPROVAL" | "ACTIVE" | "REJECTED" | "SUSPENDED" | "EXPIRED";
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PaymentRecord = {
+  id: string;
+  shopApplicationId: string;
+  shopId?: string;
+  amount: number;
+  currency: "TZS";
+  method: "M-Pesa" | "Mixx" | "Airtel" | "HaloPesa" | "other";
+  reference?: string;
+  status: "pending" | "verified" | "rejected" | "failed";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Discount = {
+  code: string;
+  percent: number;
+  freeShipping: boolean;
+  active: boolean;
+  description: string;
+};
+
 export type Database = {
   products: Product[];
   orders: Order[];
@@ -147,6 +205,9 @@ export type Database = {
   reviews: Review[];
   subscribers: NewsletterSubscriber[];
   messages: ContactMessage[];
+  shopApplications: ShopApplication[];
+  shops: Shop[];
+  payments: PaymentRecord[];
 };
 
 export type Currency = "TZS" | "USD";
