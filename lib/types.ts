@@ -67,14 +67,6 @@ export type WishlistItem = {
   price: number;
 };
 
-export type Discount = {
-  code: string;
-  percent: number;
-  freeShipping: boolean;
-  active: boolean;
-  description: string;
-};
-
 export type OrderItem = {
   productId: string;
   name: string;

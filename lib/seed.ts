@@ -1,4 +1,4 @@
-import type { Database, Product, User, Review } from "./types";
+import type { Database, Product, User, Review, ShopApplication, Shop, PaymentRecord } from "./types";
 import { hashPassword } from "./auth";
 
 const u = (id: string, w = 900) =>

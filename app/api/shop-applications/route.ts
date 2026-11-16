@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { mutateDb } from "@/lib/db";
+import type { ShopApplication } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
