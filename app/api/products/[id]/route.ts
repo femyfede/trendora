@@ -7,16 +7,17 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const db = await readDb();
   const product = db.products.find(
-    (item) => item.id === params.id || item.slug === params.id
+    (item) => item.id === id || item.slug === id
   );
   if (!product) {
     return NextResponse.json({ error: "Product not found." }, { status: 404 });
   }
-  if (!product.isActive && !isAdmin()) {
+  if (!product.isActive && !(await isAdmin())) {
     return NextResponse.json({ error: "Product not found." }, { status: 404 });
   }
   return NextResponse.json(product);
@@ -24,16 +25,17 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   try {
+    const { id } = await params;
     const body = (await request.json()) as Parameters<typeof parseProductInput>[0];
     const result = await mutateDb((db) => {
-      const existing = db.products.find((item) => item.id === params.id);
+      const existing = db.products.find((item) => item.id === id);
       if (!existing) return { status: 404, error: "Product not found." };
 
       const parsed = parseProductInput(body, existing);
@@ -45,7 +47,7 @@ export async function PATCH(
         slug: uniqueSlug(parsed.product, db.products)
       };
       db.products = db.products.map((item) =>
-        item.id === params.id ? updated : item
+        item.id === id ? updated : item
       );
       return { status: 200, product: updated };
     });
@@ -64,16 +66,17 @@ export async function PATCH(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  const { id } = await params;
   const deleted = await mutateDb((db) => {
-    const exists = db.products.some((item) => item.id === params.id);
+    const exists = db.products.some((item) => item.id === id);
     if (!exists) return false;
-    db.products = db.products.filter((item) => item.id !== params.id);
+    db.products = db.products.filter((item) => item.id !== id);
     return true;
   });
 

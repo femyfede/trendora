@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -12,26 +12,38 @@ import {
   Truck
 } from "lucide-react";
 import { readDb } from "@/lib/db";
+import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { formatTZS, formatUSD, formatDate } from "@/lib/utils";
 import { PAYMENT_METHODS, REGIONS } from "@/lib/constants";
+import { verifyOrderAccessToken } from "@/lib/order-access";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Order Confirmation",
-  description: "Thank you for shopping with TRENDORA."
+  description: "Thank you for shopping with TRENDORA.",
+  robots: { index: false, follow: false }
 };
 
 export default async function OrderPage({
   params,
   searchParams
 }: {
-  params: { id: string };
-  searchParams: { success?: string };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ success?: string; access?: string }>;
 }) {
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   const db = await readDb();
-  const order = db.orders.find((item) => item.id === params.id);
+  const order = db.orders.find((item) => item.id === id);
   if (!order) notFound();
+  const [admin, user] = await Promise.all([isAdmin(), getCurrentUser()]);
+  if (
+    !admin &&
+    user?.id !== order.userId &&
+    !verifyOrderAccessToken(query.access ?? null, order.accessTokenHash)
+  ) {
+    redirect("/account");
+  }
 
   const region = REGIONS.find((item) => item.name === order.customer.region);
   const method =
@@ -40,7 +52,7 @@ export default async function OrderPage({
 
   return (
     <div className="container-shell py-10 lg:py-16">
-      {searchParams.success && (
+      {query.success && (
         <div className="mx-auto max-w-3xl rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 text-center sm:p-8">
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-white text-emerald-600 shadow-sm">
             <CheckCircle2 className="h-7 w-7" />

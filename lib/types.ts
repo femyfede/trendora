@@ -80,6 +80,8 @@ export type OrderItem = {
 
 export type Order = {
   id: string;
+  userId?: string;
+  accessTokenHash?: string;
   items: OrderItem[];
   subtotal: number;
   discountAmount: number;
@@ -133,6 +135,7 @@ export type ContactMessage = {
 
 export type ShopApplication = {
   id: string;
+  ownerId: string;
   shopName: string;
   ownerName: string;
   phone: string;
@@ -181,6 +184,11 @@ export type PaymentRecord = {
   updatedAt: string;
 };
 
+export type PlatformSettings = {
+  shopRegistrationFeeTzs: number | null;
+  shopPaymentInstructions: string;
+};
+
 export type Discount = {
   code: string;
   percent: number;
@@ -200,6 +208,7 @@ export type Database = {
   shopApplications: ShopApplication[];
   shops: Shop[];
   payments: PaymentRecord[];
+  settings: PlatformSettings;
 };
 
 export type Currency = "TZS" | "USD";

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const db = await readDb();
   const url = new URL(request.url);
-  if (url.searchParams.get("all") === "1" && isAdmin()) {
+  if (url.searchParams.get("all") === "1" && await isAdmin()) {
     return NextResponse.json(db.products);
   }
   return NextResponse.json(
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 

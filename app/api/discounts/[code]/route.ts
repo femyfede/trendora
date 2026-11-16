@@ -7,15 +7,16 @@ export const dynamic = "force-dynamic";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { code: string } }
+  { params }: { params: Promise<{ code: string }> }
 ) {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   try {
+    const { code: routeCode } = await params;
     const body = (await request.json()) as Partial<Discount>;
-    const code = params.code.toUpperCase();
+    const code = routeCode.toUpperCase();
 
     const updated = await mutateDb((db) => {
       const discount = db.discounts.find((item) => item.code === code);
@@ -41,14 +42,15 @@ export async function PATCH(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { code: string } }
+  { params }: { params: Promise<{ code: string }> }
 ) {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  const { code: routeCode } = await params;
   const deleted = await mutateDb((db) => {
-    const code = params.code.toUpperCase();
+    const code = routeCode.toUpperCase();
     const exists = db.discounts.some((item) => item.code === code);
     if (!exists) return false;
     db.discounts = db.discounts.filter((item) => item.code !== code);

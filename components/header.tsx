@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { key: "nav.home" as const, href: "/" },
   { key: "nav.shop" as const, href: "/shop" },
+  { key: "nav.shops" as const, href: "/shops" },
   { key: "nav.men" as const, href: "/shop?category=Men" },
   { key: "nav.women" as const, href: "/shop?category=Women" },
   { key: "nav.new" as const, href: "/shop?sort=newest" },
@@ -119,6 +120,12 @@ export function Header() {
           </nav>
 
           <div className="flex items-center gap-0.5 sm:gap-1">
+            <Link
+              href="/create-shop"
+              className="hidden whitespace-nowrap rounded-full bg-brand-700 px-3 py-2 text-[10px] font-bold text-white transition hover:bg-brand-800 lg:inline-flex"
+            >
+              Fungua duka lako
+            </Link>
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
@@ -191,6 +198,13 @@ export function Header() {
                   <span className="text-zinc-300">→</span>
                 </Link>
               ))}
+              <Link
+                href="/create-shop"
+                className="mt-5 flex items-center justify-between rounded-xl bg-brand-700 px-4 py-3.5 font-semibold text-white"
+              >
+                Fungua Duka Lako
+                <span>→</span>
+              </Link>
               <div className="mt-5 grid grid-cols-2 gap-2">
                 <Link
                   href="/account"

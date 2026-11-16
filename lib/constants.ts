@@ -163,7 +163,7 @@ export const PAYMENT_METHODS = [
     id: "test",
     label: "Demo test payment",
     description: "Sandbox mode for testing checkout. No real charge is made.",
-    available: true
+    available: process.env.NODE_ENV !== "production"
   }
 ];
 

@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Search,
   ShoppingCart,
+  Store,
   Tag,
   Trash2,
   TrendingUp,
@@ -23,13 +24,13 @@ import {
   LineChart,
   DollarSign
 } from "lucide-react";
-import type { Discount, Order, Product } from "@/lib/types";
+import type { Discount, Order, PaymentRecord, Product, ShopApplication } from "@/lib/types";
 import { ORDER_STATUSES } from "@/lib/constants";
 import { AdminProductForm } from "@/components/admin/product-form";
 import { useStore } from "@/components/store-context";
 import { cn, formatDate, formatTZS } from "@/lib/utils";
 
-type Tab = "overview" | "analytics" | "products" | "orders" | "discounts" | "users";
+type Tab = "overview" | "analytics" | "products" | "orders" | "discounts" | "users" | "shops";
 
 const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
@@ -37,7 +38,8 @@ const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
   { id: "products", label: "Products", icon: Package },
   { id: "orders", label: "Orders", icon: ShoppingCart },
   { id: "discounts", label: "Discounts", icon: Tag },
-  { id: "users", label: "Users", icon: Users }
+  { id: "users", label: "Users", icon: Users },
+  { id: "shops", label: "Shops", icon: Store }
 ];
 
 export function AdminClient() {
@@ -51,6 +53,11 @@ export function AdminClient() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [applications, setApplications] = useState<ShopApplication[]>([]);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [shopFee, setShopFee] = useState("");
+  const [paymentInstructions, setPaymentInstructions] = useState("");
+  const [savingShopFee, setSavingShopFee] = useState(false);
   const [analytics, setAnalytics] = useState<any>(null);
   const [loadingData, setLoadingData] = useState(false);
   const [tab, setTab] = useState<Tab>("overview");
@@ -68,22 +75,71 @@ export function AdminClient() {
   const loadAll = useCallback(async () => {
     setLoadingData(true);
     try {
-      const [productsRes, ordersRes, discountsRes, usersRes, analyticsRes] = await Promise.all([
+      const [
+        productsRes,
+        ordersRes,
+        discountsRes,
+        usersRes,
+        analyticsRes,
+        applicationsRes,
+        paymentsRes,
+        settingsRes
+      ] = await Promise.all([
         fetch("/api/products?all=1", { cache: "no-store" }),
         fetch("/api/orders", { cache: "no-store" }),
         fetch("/api/discounts", { cache: "no-store" }),
         fetch("/api/admin/users", { cache: "no-store" }),
-        fetch("/api/admin/analytics", { cache: "no-store" })
+        fetch("/api/admin/analytics", { cache: "no-store" }),
+        fetch("/api/admin/shops?action=list-all", { cache: "no-store" }),
+        fetch("/api/admin/shops?action=payments-list", { cache: "no-store" }),
+        fetch("/api/admin/shops?action=settings", { cache: "no-store" })
       ]);
-      if (ordersRes.status === 401 || discountsRes.status === 401 || usersRes.status === 401 || analyticsRes.status === 401) {
+      if (
+        [
+          ordersRes,
+          discountsRes,
+          usersRes,
+          analyticsRes,
+          applicationsRes,
+          paymentsRes,
+          settingsRes
+        ].some((response) => response.status === 401)
+      ) {
         setAdmin(false);
         return;
       }
-      setProducts(await productsRes.json());
-      setOrders(await ordersRes.json());
-      setDiscounts(await discountsRes.json());
-      setUsers(await usersRes.json());
-      setAnalytics(await analyticsRes.json());
+      const [
+        productsData,
+        ordersData,
+        discountsData,
+        usersData,
+        analyticsData,
+        applicationsData,
+        paymentsData,
+        settingsData
+      ] = await Promise.all([
+        productsRes.json(),
+        ordersRes.json(),
+        discountsRes.json(),
+        usersRes.json(),
+        analyticsRes.json(),
+        applicationsRes.json(),
+        paymentsRes.json(),
+        settingsRes.json()
+      ]);
+      setProducts(productsData);
+      setOrders(ordersData);
+      setDiscounts(discountsData);
+      setUsers(usersData);
+      setAnalytics(analyticsData);
+      setApplications(applicationsData.applications);
+      setPayments(paymentsData.payments);
+      setShopFee(
+        settingsData.settings.shopRegistrationFeeTzs == null
+          ? ""
+          : String(settingsData.settings.shopRegistrationFeeTzs)
+      );
+      setPaymentInstructions(settingsData.settings.shopPaymentInstructions || "");
     } catch {
       toast("Could not load dashboard data.", "error");
     } finally {
@@ -129,6 +185,8 @@ export function AdminClient() {
     setProducts([]);
     setOrders([]);
     setDiscounts([]);
+    setApplications([]);
+    setPayments([]);
   };
 
   const stats = useMemo(() => {
@@ -264,6 +322,56 @@ export function AdminClient() {
     }
   };
 
+  const saveShopFee = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSavingShopFee(true);
+    try {
+      const response = await fetch("/api/admin/shops", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save-settings",
+          fee: shopFee.trim() ? Number(shopFee) : null,
+          instructions: paymentInstructions
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not save shop fee.");
+      setShopFee(data.settings.shopRegistrationFeeTzs == null ? "" : String(data.settings.shopRegistrationFeeTzs));
+      toast(data.settings.shopRegistrationFeeTzs == null ? "Shop fee unset." : "Shop fee updated.");
+    } catch (caught) {
+      toast(caught instanceof Error ? caught.message : "Could not save shop fee.", "error");
+    } finally {
+      setSavingShopFee(false);
+    }
+  };
+
+  const updateShopApplication = async (
+    application: ShopApplication,
+    action: "verify-payment" | "approve" | "reject",
+    paymentId?: string
+  ) => {
+    try {
+      const response = await fetch("/api/admin/shops", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, id: application.id, paymentId })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not update shop application.");
+      toast(
+        action === "verify-payment"
+          ? "Payment verified. Review the shop before activating it."
+          : action === "approve"
+            ? "Shop activated."
+            : "Shop application rejected."
+      );
+      await loadAll();
+    } catch (caught) {
+      toast(caught instanceof Error ? caught.message : "Could not update shop application.", "error");
+    }
+  };
+
   if (admin === null) {
     return (
       <div className="flex min-h-[55vh] items-center justify-center text-sm text-zinc-500">
@@ -385,6 +493,8 @@ export function AdminClient() {
                   ? orders.length
                   : item.id === "discounts"
                     ? discounts.length
+                    : item.id === "shops"
+                      ? applications.filter((application) => application.status !== "ACTIVE").length
                     : undefined;
             return (
               <button
@@ -1149,6 +1259,136 @@ export function AdminClient() {
                 <p className="px-5 py-10 text-center text-xs text-zinc-400">No users found</p>
               )}
             </div>
+          </div>
+        )}
+
+        {tab === "shops" && (
+          <div className="space-y-5">
+            <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+              <div className="max-w-xl">
+                <h2 className="font-display text-lg font-extrabold">Shop registration fee</h2>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                  Set the actual fee in whole TZS. Leave blank to keep new shop applications disabled.
+                </p>
+                <form onSubmit={saveShopFee} className="mt-4 flex flex-col gap-2 sm:flex-row">
+                  <label className="sr-only" htmlFor="shop-registration-fee">Registration fee in TZS</label>
+                  <input
+                    id="shop-registration-fee"
+                    className="field"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputMode="numeric"
+                    value={shopFee}
+                    onChange={(event) => setShopFee(event.target.value)}
+                    placeholder="Fee not configured"
+                  />
+                  <button type="submit" disabled={savingShopFee} className="btn-primary shrink-0">
+                    {savingShopFee ? "Saving…" : "Save settings"}
+                  </button>
+                </form>
+                <label className="mt-4 block text-xs font-semibold text-zinc-700" htmlFor="shop-payment-instructions">
+                  Payment instructions for applicants
+                </label>
+                <textarea
+                  id="shop-payment-instructions"
+                  className="field mt-1.5 min-h-24"
+                  value={paymentInstructions}
+                  onChange={(event) => setPaymentInstructions(event.target.value)}
+                  maxLength={2000}
+                  placeholder="Add your verified business payment number and instructions. Do not use personal details unless intended."
+                />
+                <p className="mt-2 text-[10px] text-zinc-400">
+                  {shopFee && paymentInstructions.trim()
+                    ? `${formatTZS(Number(shopFee))}. Shop applications open only when both settings are filled.`
+                    : "A fee and payment instructions are required before applications can be submitted."}
+                </p>
+              </div>
+            </section>
+
+            <div className="flex items-center justify-between">
+              <h2 className="font-display text-lg font-extrabold">Shop applications</h2>
+              <span className="text-xs text-zinc-500">{applications.length} total</span>
+            </div>
+
+            {applications.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-zinc-300 bg-white px-5 py-12 text-center text-sm text-zinc-500">
+                No shop applications yet.
+              </div>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                {applications.map((application) => {
+                  const applicationPayments = payments.filter(
+                    (payment) => payment.shopApplicationId === application.id
+                  );
+                  return (
+                    <article key={application.id} className="rounded-2xl border border-zinc-200 bg-white p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-display text-base font-extrabold">{application.shopName}</h3>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            {application.ownerName} · {application.region}, {application.district}
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            {application.phone}{application.email ? ` · ${application.email}` : ""}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-800">
+                          {application.status.replaceAll("_", " ")}
+                        </span>
+                      </div>
+                      <p className="mt-3 text-xs leading-relaxed text-zinc-600">{application.description}</p>
+
+                      {applicationPayments.length > 0 && (
+                        <div className="mt-4 space-y-2 border-t border-zinc-100 pt-4">
+                          <h4 className="text-[10px] font-bold uppercase tracking-wide text-zinc-400">Payment records</h4>
+                          {applicationPayments.map((payment) => (
+                            <div key={payment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-smoke/70 p-3">
+                              <div className="text-xs">
+                                <p className="font-semibold text-ink">
+                                  {payment.method} · {payment.reference}
+                                </p>
+                                <p className="mt-0.5 text-zinc-500">
+                                  {formatTZS(payment.amount)} · {payment.status}
+                                </p>
+                              </div>
+                              {payment.status === "pending" && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateShopApplication(application, "verify-payment", payment.id)}
+                                  className="rounded-full border border-brand-700 px-3 py-2 text-[10px] font-bold text-brand-700 hover:bg-brand-50"
+                                >
+                                  Verify payment
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {application.status === "PENDING_APPROVAL" && (
+                        <div className="mt-4 flex gap-2 border-t border-zinc-100 pt-4">
+                          <button
+                            type="button"
+                            onClick={() => updateShopApplication(application, "approve")}
+                            className="btn-primary"
+                          >
+                            Approve and activate
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateShopApplication(application, "reject")}
+                            className="rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -313,6 +313,12 @@ export function AccountClient() {
                             </span>
                           ))}
                         </div>
+                        <Link
+                          href={`/order/${encodeURIComponent(order.id)}`}
+                          className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 hover:text-brand-800"
+                        >
+                          View order details <ArrowRight className="h-3 w-3" />
+                        </Link>
                       </div>
                     ))}
                   </div>

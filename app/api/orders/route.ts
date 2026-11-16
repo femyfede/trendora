@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { mutateDb, readDb } from "@/lib/db";
-import { isAdmin } from "@/lib/auth";
+import { getCurrentUser, isAdmin } from "@/lib/auth";
 import {
   FREE_SHIPPING_THRESHOLD,
   PAYMENT_METHODS,
@@ -13,6 +13,7 @@ import {
 } from "@/lib/utils";
 import type { Order, OrderItem } from "@/lib/types";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import { createOrderAccessToken, hashOrderAccessToken } from "@/lib/order-access";
 
 export const dynamic = "force-dynamic";
 
@@ -41,13 +42,17 @@ type CheckoutBody = {
 };
 
 export async function GET() {
-  if (!isAdmin()) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
+  const admin = await isAdmin();
+  const user = admin ? null : await getCurrentUser();
+  if (!admin && !user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+
   const db = await readDb();
-  const orders = [...db.orders].sort(
+  const visibleOrders = admin
+    ? db.orders
+    : db.orders.filter((order) => order.userId === user?.id);
+  const orders = [...visibleOrders].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  ).map(({ accessTokenHash, ...order }) => order);
   return NextResponse.json(orders);
 }
 
@@ -98,6 +103,8 @@ export async function POST(request: Request) {
     );
   }
 
+  const user = await getCurrentUser();
+  const accessToken = createOrderAccessToken();
   const result = await mutateDb((db) => {
     const items: OrderItem[] = [];
 
@@ -170,6 +177,8 @@ export async function POST(request: Request) {
 
     const order: Order = {
       id: orderId(),
+      userId: user?.id,
+      accessTokenHash: hashOrderAccessToken(accessToken),
       items,
       subtotal,
       discountAmount,
@@ -204,5 +213,6 @@ export async function POST(request: Request) {
   const order = result.order!;
   await sendOrderConfirmationEmail(order);
 
-  return NextResponse.json({ order }, { status: 201 });
+  const { accessTokenHash, ...publicOrder } = order;
+  return NextResponse.json({ order: publicOrder, accessToken }, { status: 201 });
 }

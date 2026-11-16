@@ -8,13 +8,26 @@ import { cookies } from "next/headers";
 import { readDb, mutateDb } from "./db";
 import type { User, UserRole } from "./types";
 
-const SECRET = process.env.AUTH_SECRET || "trendora-local-dev-secret-change-me";
 const SESSION_COOKIE = "trendora_session";
 const ADMIN_COOKIE = "trendora_admin";
 const SESSION_TTL = 1000 * 60 * 60 * 24 * 7;
 
+function getSecret() {
+  const secret = process.env.AUTH_SECRET;
+  if (secret) {
+    if (process.env.NODE_ENV === "production" && secret.length < 32) {
+      throw new Error("AUTH_SECRET must be at least 32 characters in production.");
+    }
+    return secret;
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_SECRET must be configured in production.");
+  }
+  return "trendora-local-dev-secret-change-me";
+}
+
 function sign(value: string) {
-  return createHmac("sha256", SECRET).update(value).digest("hex");
+  return createHmac("sha256", getSecret()).update(value).digest("hex");
 }
 
 function safeCompare(a: string, b: string) {
@@ -72,12 +85,14 @@ export function verifyAdminToken(token: string | undefined | null) {
 }
 
 export function checkAdminPassword(password: string) {
-  const expected = process.env.ADMIN_PASSWORD || "trendora2026";
+  const expected = process.env.ADMIN_PASSWORD ||
+    (process.env.NODE_ENV === "production" ? "" : "trendora2026");
+  if (!expected) return false;
   return password.length === expected.length && safeCompare(password, expected);
 }
 
 export async function getCurrentUser() {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const session = verifySessionToken(token);
   if (!session) return null;
   const db = await readDb();
@@ -86,19 +101,19 @@ export async function getCurrentUser() {
   return { id: user.id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt };
 }
 
-export function isAdmin() {
-  return verifyAdminToken(cookies().get(ADMIN_COOKIE)?.value) === true;
+export async function isAdmin() {
+  return verifyAdminToken((await cookies()).get(ADMIN_COOKIE)?.value) === true;
 }
 
-export function hasRole(...roles: UserRole[]) {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+export async function hasRole(...roles: UserRole[]) {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const session = verifySessionToken(token);
   if (!session) return false;
   return roles.includes(session.role);
 }
 
-export function requireAuth(...roles: UserRole[]) {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+export async function requireAuth(...roles: UserRole[]) {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const session = verifySessionToken(token);
   if (!session) return { authenticated: false, user: null, error: "Not authenticated" };
   if (roles.length > 0 && !roles.includes(session.role)) {

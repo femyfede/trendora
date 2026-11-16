@@ -9,6 +9,16 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  if (
+    process.env.NODE_ENV === "production" &&
+    (!process.env.AUTH_SECRET || process.env.AUTH_SECRET.length < 32 || !process.env.ADMIN_PASSWORD)
+  ) {
+    return NextResponse.json(
+      { error: "Admin authentication is not configured for production." },
+      { status: 503 }
+    );
+  }
+
   try {
     const body = (await request.json()) as { password?: string };
     if (!checkAdminPassword(String(body.password ?? ""))) {

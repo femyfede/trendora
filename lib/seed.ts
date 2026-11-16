@@ -736,93 +736,11 @@ export const seedDatabase = (): Database => ({
   ] as Review[],
   subscribers: [],
   messages: [],
-  // Shop applications and shops (pending payment approval system)
-  shopApplications: [
-    {
-      id: "app-1",
-      shopName: "Kijani Styles",
-      ownerName: "Aisha Mohamed",
-      phone: "+255 712 345 678",
-      whatsapp: "+255 712 345 678",
-      email: "aisha@kijanistyles.co.tz",
-      category: "Women",
-      description: "African-inspired fashion and contemporary wear",
-      region: "Dar es Salaam",
-      district: "Kinondoni",
-      physicalLocation: "Msasani Peninsula",
-      status: "ACTIVE",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: "app-2",
-      shopName: "Urban Thread",
-      ownerName: "Julius John",
-      phone: "+255 754 123 456",
-      whatsapp: "+255 754 123 456",
-      email: "julius@urbanthread.co.tz",
-      category: "Men",
-      description: "Modern menswear and casual fashion",
-      region: "Dar es Salaam",
-      district: "Kigoma",
-      physicalLocation: "Kigoma Road",
-      status: "PENDING_PAYMENT",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ] as ShopApplication[],
-  shops: [
-    {
-      id: "s-1",
-      name: "Kijani Styles",
-      ownerName: "Aisha Mohamed",
-      phone: "+255 712 345 678",
-      whatsapp: "+255 712 345 678",
-      email: "aisha@kijanistyles.co.tz",
-      category: "Women",
-      description: "African-inspired fashion and contemporary wear",
-      region: "Dar es Salaam",
-      district: "Kinondoni",
-      physicalLocation: "Msasani Peninsula",
-      logo: "/placeholder-logo.png",
-      coverImage: "/placeholder-cover.jpg",
-      status: "ACTIVE",
-      ownerId: "user-demo",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: "s-2",
-      name: "Urban Thread",
-      ownerName: "Julius John",
-      phone: "+255 754 123 456",
-      whatsapp: "+255 754 123 456",
-      email: "julius@urbanthread.co.tz",
-      category: "Men",
-      description: "Modern menswear and casual fashion",
-      region: "Dar es Salaam",
-      district: "Kigoma",
-      physicalLocation: "Kigoma Road",
-      logo: "/placeholder-logo.png",
-      coverImage: "/placeholder-cover.jpg",
-      status: "PENDING_PAYMENT",
-      ownerId: "user-manager",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ] as Shop[],
-  payments: [
-    {
-      id: "pay-1",
-      shopApplicationId: "app-1",
-      shopId: "s-1",
-      amount: 50000,
-      currency: "TZS",
-      method: "M-Pesa",
-      reference: "MPESA123456",
-      status: "verified",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ] as PaymentRecord[],
+  shopApplications: [] as ShopApplication[],
+  shops: [] as Shop[],
+  payments: [] as PaymentRecord[],
+  settings: {
+    shopRegistrationFeeTzs: null,
+    shopPaymentInstructions: ""
+  }
 });

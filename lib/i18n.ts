@@ -3,6 +3,7 @@ import type { Language } from "./types";
 const dict = {
   "nav.home": ["Home", "Nyumbani"],
   "nav.shop": ["Shop", "Duka"],
+  "nav.shops": ["Marketplace shops", "Maduka"],
   "nav.men": ["Men", "Wanaume"],
   "nav.women": ["Women", "Wanawake"],
   "nav.new": ["New Arrivals", "Mpya"],

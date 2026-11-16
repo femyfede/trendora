@@ -5,6 +5,6 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const user = await getCurrentUser();
-  const admin = isAdmin();
+  const admin = await isAdmin();
   return NextResponse.json({ admin, user });
 }

@@ -13,21 +13,22 @@ export const metadata: Metadata = {
 export default async function ShopPage({
   searchParams
 }: {
-  searchParams: {
+  searchParams: Promise<{
     category?: string;
     q?: string;
     sort?: string;
-  };
+  }>;
 }) {
+  const query = await searchParams;
   const db = await readDb();
   const products = db.products.filter((product) => product.isActive);
 
   return (
     <ShopClient
       products={products}
-      initialCategory={searchParams.category ?? ""}
-      initialQuery={searchParams.q ?? ""}
-      initialSort={searchParams.sort ?? "featured"}
+      initialCategory={query.category ?? ""}
+      initialQuery={query.q ?? ""}
+      initialSort={query.sort ?? "featured"}
     />
   );
 }

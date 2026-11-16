@@ -16,9 +16,10 @@ async function getProduct(slug: string) {
 export async function generateMetadata({
   params
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const product = await getProduct(params.slug);
+  const { slug } = await params;
+  const product = await getProduct(slug);
   if (!product) return { title: "Product not found" };
   return {
     title: product.name,
@@ -34,11 +35,12 @@ export async function generateMetadata({
 export default async function ProductPage({
   params
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   const db = await readDb();
   const product = db.products.find(
-    (item) => item.slug === params.slug && item.isActive
+    (item) => item.slug === slug && item.isActive
   );
   if (!product) notFound();
 

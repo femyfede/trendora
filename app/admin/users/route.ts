@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { readDb } from "@/lib/db";
+import { mutateDb, readDb } from "@/lib/db";
 import { isAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
   const db = await readDb();
@@ -22,7 +22,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
@@ -36,12 +36,21 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const updated = await readDb().then(async (db) => {
+    const updated = await mutateDb((db) => {
       const user = db.users.find((u) => u.id === id);
       if (!user) return null;
       user.isActive = isActive;
       user.updatedAt = new Date().toISOString();
-      return user;
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        lastLoginAt: user.lastLoginAt,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      };
     });
 
     if (!updated) {
