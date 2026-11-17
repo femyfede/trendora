@@ -4,7 +4,7 @@ import { getCurrentUser, isAdmin } from "@/lib/auth";
 import { ORDER_STATUSES } from "@/lib/constants";
 import type { Order } from "@/lib/types";
 import { sendOrderStatusUpdateEmail } from "@/lib/email";
-import { verifyOrderAccessToken } from "@/lib/order-access";
+import { canViewOrder } from "@/lib/order-access";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +21,7 @@ export async function GET(
   const admin = await isAdmin();
   const user = admin ? null : await getCurrentUser();
   const accessToken = new URL(request.url).searchParams.get("access");
-  if (
-    !admin &&
-    user?.id !== order.userId &&
-    !verifyOrderAccessToken(accessToken, order.accessTokenHash)
-  ) {
+  if (!canViewOrder(order, { admin, userId: user?.id, accessToken })) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
   const { accessTokenHash, ...publicOrder } = order;
@@ -52,9 +48,16 @@ export async function PATCH(
       if (!order) return null;
 
       if (body.status === "cancelled" && order.status !== "cancelled") {
+        // Cancelling returns the reserved stock.
         for (const item of order.items) {
           const product = db.products.find((entry) => entry.id === item.productId);
           if (product) product.stock += item.qty;
+        }
+      } else if (body.status !== "cancelled" && order.status === "cancelled") {
+        // Re-opening a cancelled order reserves the stock again.
+        for (const item of order.items) {
+          const product = db.products.find((entry) => entry.id === item.productId);
+          if (product) product.stock = Math.max(0, product.stock - item.qty);
         }
       }
       order.status = body.status as Order["status"];
@@ -65,7 +68,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Order not found." }, { status: 404 });
     }
 
-    await sendOrderStatusUpdateEmail(updated);
+    await sendOrderStatusUpdateEmail(updated).catch(() => undefined);
 
     const { accessTokenHash, ...publicOrder } = updated;
     return NextResponse.json({ order: publicOrder });

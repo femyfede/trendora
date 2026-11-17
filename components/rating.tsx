@@ -17,7 +17,8 @@ export function Rating({
     <div className={cn("flex items-center gap-1.5", className)}>
       <div
         className="flex items-center gap-0.5 text-amber-400"
-        aria-label={`${rating.toFixed(1)} out of 5 stars`}
+        role="img"
+        aria-label={`${rating.toFixed(1)} / 5`}
       >
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
@@ -31,14 +32,11 @@ export function Rating({
           />
         ))}
       </div>
-      <span
-        className={cn(
-          "text-zinc-500",
-          compact ? "text-[10px] sm:text-[11px]" : "text-xs"
-        )}
-      >
-        ({reviewCount ?? 0})
-      </span>
+      {reviewCount !== undefined && (
+        <span className={cn("text-zinc-500", compact ? "text-[11px]" : "text-xs")}>
+          ({reviewCount})
+        </span>
+      )}
     </div>
   );
 }

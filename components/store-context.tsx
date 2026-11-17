@@ -8,6 +8,7 @@ import {
   useMemo,
   useState
 } from "react";
+import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 import type {
   CartItem,
@@ -18,13 +19,12 @@ import type {
   WishlistItem
 } from "@/lib/types";
 import { formatPrice, cn } from "@/lib/utils";
-import { translate, type TranslationKey } from "@/lib/i18n";
+import { LANGUAGE_COOKIE, pick, translate, type TranslationKey } from "@/lib/i18n";
 
 const KEYS = {
   cart: "trendora:v1:cart",
   wishlist: "trendora:v1:wishlist",
   currency: "trendora:v1:currency",
-  language: "trendora:v1:language",
   discount: "trendora:v1:discount"
 };
 
@@ -41,7 +41,20 @@ type AddToCartInput = {
   qty?: number;
 };
 
+export type SessionUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  createdAt?: string;
+};
+
 type StoreContextValue = {
+  user: SessionUser | null;
+  userLoaded: boolean;
+  refreshUser: () => Promise<SessionUser | null>;
+  setUser: (user: SessionUser | null) => void;
+  tr: (en: string, sw: string) => string;
   hydrated: boolean;
   cart: CartItem[];
   wishlist: WishlistItem[];
@@ -77,12 +90,23 @@ function read<T>(key: string, fallback: T): T {
   }
 }
 
-export function StoreProvider({ children }: { children: React.ReactNode }) {
+export function StoreProvider({
+  children,
+  initialLanguage = "sw"
+}: {
+  children: React.ReactNode;
+  initialLanguage?: Language;
+}) {
+  const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [userLoaded, setUserLoaded] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
   const [currency, setCurrencyState] = useState<Currency>("TZS");
-  const [language, setLanguageState] = useState<Language>("sw");
+  // The language comes from a cookie read on the server, so the first render is
+  // already in the right language (Kiswahili by default) with no flash.
+  const [language, setLanguageState] = useState<Language>(initialLanguage);
   const [discount, setDiscount] = useState<Discount | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -90,7 +114,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setCart(read<CartItem[]>(KEYS.cart, []));
     setWishlist(read<WishlistItem[]>(KEYS.wishlist, []));
     setCurrencyState(read<Currency>(KEYS.currency, "TZS"));
-    setLanguageState(read<Language>(KEYS.language, "en"));
     setDiscount(read<Discount | null>(KEYS.discount, null));
     setHydrated(true);
   }, []);
@@ -101,12 +124,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       window.localStorage.setItem(KEYS.cart, JSON.stringify(cart));
       window.localStorage.setItem(KEYS.wishlist, JSON.stringify(wishlist));
       window.localStorage.setItem(KEYS.currency, JSON.stringify(currency));
-      window.localStorage.setItem(KEYS.language, JSON.stringify(language));
       window.localStorage.setItem(KEYS.discount, JSON.stringify(discount));
     } catch {
       // Storage can be unavailable in private modes; the session still works.
     }
-  }, [cart, wishlist, currency, language, discount, hydrated]);
+  }, [cart, wishlist, currency, discount, hydrated]);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await fetch("/api/auth/me", { cache: "no-store" });
+      const data = (await response.json()) as { user: SessionUser | null };
+      setUser(data.user ?? null);
+      return data.user ?? null;
+    } catch {
+      setUser(null);
+      return null;
+    } finally {
+      setUserLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
 
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
@@ -161,11 +201,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           }
         ];
       });
-      toast(
-        language === "sw"
-          ? `${product.name} imeongezwa kwenye kikapu`
-          : `${product.name} added to cart`
-      );
+      toast(pick(language, `${product.name} added to your cart`, `${product.name} imewekwa kwenye kikapu`));
     },
     [language, toast]
   );
@@ -194,17 +230,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setWishlist((current) => {
         const exists = current.some((item) => item.productId === product.id);
         if (exists) {
-          toast(
-            language === "sw"
-              ? "Imeondolewa kwenye orodha ya kupenda"
-              : "Removed from wishlist",
-            "info"
-          );
+          toast(pick(language, "Removed from saved items", "Imeondolewa kwenye ulivyopenda"), "info");
           return current.filter((item) => item.productId !== product.id);
         }
-        toast(
-          language === "sw" ? "Imeongezwa kwenye orodha ya kupenda" : "Added to wishlist"
-        );
+        toast(pick(language, "Saved to your list", "Imehifadhiwa kwenye ulivyopenda"));
         return [
           ...current,
           {
@@ -230,7 +259,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setCurrency = useCallback((next: Currency) => setCurrencyState(next), []);
-  const setLanguage = useCallback((next: Language) => setLanguageState(next), []);
+  const setLanguage = useCallback(
+    (next: Language) => {
+      setLanguageState(next);
+      document.cookie = `${LANGUAGE_COOKIE}=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+      document.documentElement.lang = next;
+      // Re-render server components (page text, metadata) in the new language.
+      router.refresh();
+    },
+    [router]
+  );
   const applyDiscount = useCallback(
     (next: Discount | null) => setDiscount(next),
     []
@@ -254,8 +292,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (key: TranslationKey) => translate(key, language),
     [language]
   );
+  const tr = useCallback((en: string, sw: string) => pick(language, en, sw), [language]);
 
   const value: StoreContextValue = {
+    user,
+    userLoaded,
+    refreshUser,
+    setUser,
+    tr,
     hydrated,
     cart,
     wishlist,
@@ -285,7 +329,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       {children}
       <div
         aria-live="polite"
-        className="pointer-events-none fixed inset-x-4 bottom-4 z-[120] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6 sm:bottom-6"
+        className="pointer-events-none fixed inset-x-4 bottom-20 z-[120] flex flex-col items-end gap-2 sm:inset-x-auto sm:right-6 sm:bottom-6"
       >
         {toasts.map((item) => (
           <div
@@ -313,7 +357,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
                 setToasts((current) => current.filter((t) => t.id !== item.id))
               }
               className="rounded-full p-1 text-zinc-400 transition hover:bg-zinc-100 hover:text-ink"
-              aria-label="Dismiss notification"
+              aria-label={pick(language, "Dismiss notification", "Funga taarifa")}
             >
               <X className="h-4 w-4" />
             </button>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { CATEGORIES, REGIONS } from "@/lib/constants";
+import { SELECTABLE_REGIONS, SHOP_CATEGORIES } from "@/lib/constants";
+import { getTranslator } from "@/lib/i18n-server";
 import { mutateDb, readDb } from "@/lib/db";
 import { isValidEmail } from "@/lib/utils";
 import type { ShopApplication } from "@/lib/types";
@@ -24,9 +25,13 @@ const cleanPhone = (value: string) => value.replace(/[\s()-]/g, "");
 const isTanzaniaMobile = (value: string) => /^(\+255|0)[67]\d{8}$/.test(value);
 
 export async function GET() {
+  const { tr } = await getTranslator();
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Sign in to view your shop applications." }, { status: 401 });
+    return NextResponse.json(
+      { error: tr("Log in to see your shop application.", "Ingia ili kuona ombi la duka lako.") },
+      { status: 401 }
+    );
   }
   const db = await readDb();
   const applications = db.shopApplications
@@ -45,16 +50,20 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const { tr } = await getTranslator();
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Sign in before opening a shop." }, { status: 401 });
+    return NextResponse.json(
+      { error: tr("Log in before registering a shop.", "Ingia kwanza kabla ya kusajili duka.") },
+      { status: 401 }
+    );
   }
 
   let body: ApplicationBody;
   try {
     body = (await request.json()) as ApplicationBody;
   } catch {
-    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+    return NextResponse.json({ error: tr("Invalid request.", "Ombi si sahihi.") }, { status: 400 });
   }
 
   const shopName = String(body.shopName ?? "").trim();
@@ -69,28 +78,28 @@ export async function POST(request: Request) {
   const physicalLocation = String(body.physicalLocation ?? "").trim();
 
   if (shopName.length < 3 || shopName.length > 100) {
-    return NextResponse.json({ error: "Shop name must be 3 to 100 characters." }, { status: 400 });
+    return NextResponse.json({ error: tr("Shop name must be 3 to 100 characters.", "Jina la duka liwe na herufi 3 hadi 100.") }, { status: 400 });
   }
   if (ownerName.length < 3 || ownerName.length > 100) {
-    return NextResponse.json({ error: "Enter the owner's full name." }, { status: 400 });
+    return NextResponse.json({ error: tr("Enter the owner's full name.", "Weka jina kamili la mmiliki.") }, { status: 400 });
   }
   if (!isTanzaniaMobile(phone) || (whatsapp && !isTanzaniaMobile(whatsapp))) {
-    return NextResponse.json({ error: "Enter a valid Tanzania phone number (+255)." }, { status: 400 });
+    return NextResponse.json({ error: tr("Enter a valid Tanzanian mobile number, e.g. 0712 345 678.", "Weka namba sahihi ya simu ya Tanzania, mfano 0712 345 678.") }, { status: 400 });
   }
   if (email && !isValidEmail(email)) {
-    return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+    return NextResponse.json({ error: tr("Enter a valid email address.", "Weka barua pepe sahihi.") }, { status: 400 });
   }
-  if (!CATEGORIES.some((entry) => entry.value === category)) {
-    return NextResponse.json({ error: "Choose a valid business category." }, { status: 400 });
+  if (!SHOP_CATEGORIES.some((entry) => entry.value === category)) {
+    return NextResponse.json({ error: tr("Choose the type of business.", "Chagua aina ya biashara.") }, { status: 400 });
   }
   if (description.length < 20 || description.length > 2000) {
-    return NextResponse.json({ error: "Description must be 20 to 2,000 characters." }, { status: 400 });
+    return NextResponse.json({ error: tr("Describe your shop in 20 to 2,000 characters.", "Elezea duka lako kwa herufi 20 hadi 2,000.") }, { status: 400 });
   }
-  if (!REGIONS.some((entry) => entry.name === region)) {
-    return NextResponse.json({ error: "Choose a valid Tanzania region." }, { status: 400 });
+  if (!SELECTABLE_REGIONS.some((entry) => entry.name === region)) {
+    return NextResponse.json({ error: tr("Choose your region.", "Chagua mkoa wako.") }, { status: 400 });
   }
   if (!district || district.length > 100 || !physicalLocation || physicalLocation.length > 300) {
-    return NextResponse.json({ error: "Enter a valid district and physical shop location." }, { status: 400 });
+    return NextResponse.json({ error: tr("Enter the district and where the shop is located.", "Weka wilaya na mahali duka lilipo.") }, { status: 400 });
   }
 
   const result = await mutateDb((db) => {
@@ -100,7 +109,7 @@ export async function POST(request: Request) {
       Number(fee) <= 0 ||
       !db.settings.shopPaymentInstructions.trim()
     ) {
-      return { error: "Shop registration is unavailable until an administrator configures the fee.", status: 503 };
+      return { error: tr("Shop registration is not open yet. Please try again later.", "Usajili wa maduka bado haujafunguliwa. Tafadhali jaribu baadaye."), status: 503 };
     }
     if (
       db.shopApplications.some(
@@ -110,13 +119,13 @@ export async function POST(request: Request) {
           application.status !== "EXPIRED"
       )
     ) {
-      return { error: "You already have an active or pending shop application.", status: 409 };
+      return { error: tr("You already have a shop application in progress.", "Tayari una ombi la duka linaloendelea."), status: 409 };
     }
     if (
       db.shopApplications.some((application) => cleanPhone(application.phone) === phone) ||
       db.shops.some((shop) => cleanPhone(shop.phone) === phone)
     ) {
-      return { error: "A shop application or shop already uses this phone number.", status: 409 };
+      return { error: tr("This phone number is already registered to another shop.", "Namba hii ya simu tayari imesajiliwa na duka lingine."), status: 409 };
     }
 
     const now = new Date().toISOString();
@@ -148,6 +157,6 @@ export async function POST(request: Request) {
   return NextResponse.json({
     application: result.application,
     requiredPaymentTzs: result.fee,
-    message: "Application submitted. The shop will stay private until payment is verified and approved."
+    message: tr("Application received.", "Ombi limepokelewa.")
   }, { status: 201 });
 }

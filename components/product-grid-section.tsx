@@ -49,7 +49,7 @@ export function ProductGridSection({
           <div className={align === "center" ? "max-w-2xl" : "max-w-xl"}>
             {kickerKey && <p className="section-kicker">{t(kickerKey)}</p>}
             <h2 className="section-title mt-1.5">{t(titleKey)}</h2>
-            <p className="mt-2.5 text-sm leading-relaxed text-zinc-500">
+            <p className="mt-2.5 text-base leading-relaxed text-zinc-600">
               {t(subtitleKey)}
             </p>
           </div>

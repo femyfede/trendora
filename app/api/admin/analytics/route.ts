@@ -1,95 +1,87 @@
 import { NextResponse } from "next/server";
 import { readDb } from "@/lib/db";
-import { getCurrentUser, hasRole } from "@/lib/auth";
+import { isAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+const DAY = 24 * 60 * 60 * 1000;
+
 export async function GET() {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   try {
-    const auth = await hasRole("admin", "manager");
-    if (!auth) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
     const db = await readDb();
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const now = Date.now();
+    const thirtyDaysAgo = now - 30 * DAY;
+    const sevenDaysAgo = now - 7 * DAY;
 
-    const validOrders = db.orders.filter((o) => o.status !== "cancelled");
-    const recentOrders = validOrders.filter((o) => new Date(o.createdAt) >= thirtyDaysAgo);
-    const lastWeekOrders = validOrders.filter((o) => new Date(o.createdAt) >= sevenDaysAgo);
+    const validOrders = db.orders.filter((order) => order.status !== "cancelled");
+    const recentOrders = validOrders.filter((order) => new Date(order.createdAt).getTime() >= thirtyDaysAgo);
+    const lastWeekOrders = validOrders.filter((order) => new Date(order.createdAt).getTime() >= sevenDaysAgo);
+    const completedOrders = db.orders.filter((order) => order.status === "completed");
 
-    const totalRevenue = validOrders.reduce((sum, o) => sum + o.total, 0);
-    const recentRevenue = recentOrders.reduce((sum, o) => sum + o.total, 0);
-    const lastWeekRevenue = lastWeekOrders.reduce((sum, o) => sum + o.total, 0);
+    const sum = (orders: typeof validOrders) => orders.reduce((total, order) => total + order.total, 0);
+    const totalRevenue = sum(validOrders);
 
     const revenueByDay: Record<string, number> = {};
     for (const order of recentOrders) {
-      const day = new Date(order.createdAt).toISOString().split("T")[0];
+      const day = new Date(order.createdAt).toISOString().slice(0, 10);
       revenueByDay[day] = (revenueByDay[day] || 0) + order.total;
     }
 
     const topProducts: Record<string, { name: string; sold: number; revenue: number }> = {};
     for (const order of validOrders) {
       for (const item of order.items) {
-        if (!topProducts[item.productId]) {
-          topProducts[item.productId] = { name: item.name, sold: 0, revenue: 0 };
-        }
+        topProducts[item.productId] ??= { name: item.name, sold: 0, revenue: 0 };
         topProducts[item.productId].sold += item.qty;
         topProducts[item.productId].revenue += item.price * item.qty;
       }
     }
-
-    const topProductsSorted = Object.entries(topProducts)
-      .sort(([, a], [, b]) => b.sold - a.sold)
-      .slice(0, 10)
-      .map(([id, data]) => ({ productId: id, ...data }));
 
     const ordersByStatus: Record<string, number> = {};
     for (const order of db.orders) {
       ordersByStatus[order.status] = (ordersByStatus[order.status] || 0) + 1;
     }
 
-    const newCustomers = db.users.filter(
-      (u) => u.role === "customer" && new Date(u.createdAt) >= thirtyDaysAgo
-    ).length;
-
-    const lowStockProducts = db.products
-      .filter((p) => p.isActive && p.stock <= 10)
-      .sort((a, b) => a.stock - b.stock)
-      .slice(0, 10);
-
-    const conversionData = {
-      totalVisitors: db.products.length * 50,
-      totalOrders: validOrders.length,
-      conversionRate: validOrders.length / (db.products.length * 50) * 100
-    };
-
     return NextResponse.json({
       overview: {
         totalRevenue,
-        recentRevenue,
-        lastWeekRevenue,
+        recentRevenue: sum(recentOrders),
+        lastWeekRevenue: sum(lastWeekOrders),
         totalOrders: validOrders.length,
         recentOrders: recentOrders.length,
         averageOrderValue: validOrders.length ? Math.round(totalRevenue / validOrders.length) : 0,
-        newCustomers,
-        conversionRate: conversionData.conversionRate.toFixed(2)
+        newCustomers: db.users.filter(
+          (user) => user.role === "customer" && new Date(user.createdAt).getTime() >= thirtyDaysAgo
+        ).length,
+        // Share of all orders that reached "completed". Visitor tracking does not exist,
+        // so no visitor-based conversion rate is reported.
+        completionRate: db.orders.length
+          ? Math.round((completedOrders.length / db.orders.length) * 100)
+          : 0
       },
       revenueByDay: Object.entries(revenueByDay)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([date, revenue]) => ({ date, revenue })),
-      topProducts: topProductsSorted,
+      topProducts: Object.entries(topProducts)
+        .sort(([, a], [, b]) => b.sold - a.sold)
+        .slice(0, 10)
+        .map(([productId, data]) => ({ productId, ...data })),
       ordersByStatus,
-      lowStockProducts: lowStockProducts.map((p) => ({
-        id: p.id,
-        name: p.name,
-        stock: p.stock,
-        category: p.category
-      }))
+      lowStockProducts: db.products
+        .filter((product) => product.isActive && product.stock <= 10)
+        .sort((a, b) => a.stock - b.stock)
+        .slice(0, 10)
+        .map((product) => ({
+          id: product.id,
+          name: product.name,
+          stock: product.stock,
+          category: product.category
+        }))
     });
   } catch {
-    return NextResponse.json({ error: "Could not fetch analytics" }, { status: 500 });
+    return NextResponse.json({ error: "Could not fetch analytics." }, { status: 500 });
   }
 }

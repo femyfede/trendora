@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
 import { readDb } from "@/lib/db";
 import { ShopClient } from "@/components/shop-client";
+import { getTranslator } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Shop All",
-  description:
-    "Shop modern clothing, shoes, bags and accessories at TRENDORA. Filter by size, colour, price and availability. Delivery across Tanzania."
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { tr } = await getTranslator();
+  return {
+    title: tr("All products", "Bidhaa zote"),
+    description: tr(
+      "Shop clothes, shoes, bags and accessories. Filter by size, colour and price. Pay on delivery anywhere in Tanzania.",
+      "Nunua nguo, viatu, mikoba na mapambo. Chuja kwa saizi, rangi na bei. Lipa ukipokea popote Tanzania."
+    )
+  };
+}
 
 export default async function ShopPage({
   searchParams
@@ -25,6 +31,7 @@ export default async function ShopPage({
 
   return (
     <ShopClient
+      key={`${query.category ?? ""}|${query.q ?? ""}|${query.sort ?? ""}`}
       products={products}
       initialCategory={query.category ?? ""}
       initialQuery={query.q ?? ""}

@@ -6,9 +6,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, Search, X } from "lucide-react";
 import type { Product } from "@/lib/types";
-import { CATEGORIES } from "@/lib/constants";
+import { CATEGORIES, categoryLabel } from "@/lib/constants";
 import { useStore } from "./store-context";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, matchesSearch } from "@/lib/utils";
 
 export function SearchOverlay({
   open,
@@ -18,7 +18,8 @@ export function SearchOverlay({
   onClose: () => void;
 }) {
   const router = useRouter();
-  const { currency, t } = useStore();
+  const { currency, t, tr, language } = useStore();
+  const [failed, setFailed] = useState(false);
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -26,12 +27,18 @@ export function SearchOverlay({
 
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
-    fetch("/api/products")
-      .then((res) => res.json())
-      .then((data: Product[]) => setProducts(data))
-      .catch(() => setProducts([]))
-      .finally(() => setLoading(false));
+    if (products.length === 0) {
+      setLoading(true);
+      setFailed(false);
+      fetch("/api/products")
+        .then((res) => {
+          if (!res.ok) throw new Error("failed");
+          return res.json();
+        })
+        .then((data: Product[]) => setProducts(Array.isArray(data) ? data : []))
+        .catch(() => setFailed(true))
+        .finally(() => setLoading(false));
+    }
 
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -40,6 +47,7 @@ export function SearchOverlay({
       document.body.style.overflow = previous;
       window.clearTimeout(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- products are fetched once and then cached
   }, [open]);
 
   useEffect(() => {
@@ -54,14 +62,7 @@ export function SearchOverlay({
   const results = useMemo(() => {
     const value = query.trim().toLowerCase();
     if (!value) return products.filter((product) => product.isBestSeller).slice(0, 5);
-    return products
-      .filter(
-        (product) =>
-          product.name.toLowerCase().includes(value) ||
-          product.category.toLowerCase().includes(value) ||
-          product.brand.toLowerCase().includes(value)
-      )
-      .slice(0, 6);
+    return products.filter((product) => matchesSearch(product, value)).slice(0, 6);
   }, [products, query]);
 
   if (!open) return null;
@@ -78,7 +79,7 @@ export function SearchOverlay({
       className="fixed inset-0 z-[110] flex justify-center bg-ink/50 backdrop-blur-sm animate-fade-in sm:p-6"
       role="dialog"
       aria-modal="true"
-      aria-label="Search products"
+      aria-label={t("common.search")}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -96,6 +97,7 @@ export function SearchOverlay({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("common.search")}
+              enterKeyHint="search"
               className="w-full bg-transparent py-2 text-base font-medium text-ink outline-none placeholder:text-zinc-400 sm:text-lg"
               autoComplete="off"
             />
@@ -103,14 +105,14 @@ export function SearchOverlay({
               type="submit"
               className="hidden rounded-full bg-brand-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-brand-800 sm:inline-flex"
             >
-              Search
+              {t("nav.search")}
             </button>
           </form>
           <button
             type="button"
             onClick={onClose}
             className="rounded-full p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-ink"
-            aria-label="Close search"
+            aria-label={t("common.close")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -119,8 +121,8 @@ export function SearchOverlay({
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {!query && (
             <div className="mb-5">
-              <p className="mb-8 text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                Browse by category
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
+                {tr("Browse by category", "Chagua kwa aina")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {CATEGORIES.map((category) => (
@@ -133,7 +135,7 @@ export function SearchOverlay({
                     }}
                     className="chip"
                   >
-                    {category.value}
+                    {categoryLabel(category.value, language)}
                   </button>
                 ))}
               </div>
@@ -141,20 +143,25 @@ export function SearchOverlay({
           )}
 
           <div className="flex items-center justify-between">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
-              {query ? "Matching pieces" : "Trending now"}
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
+              {query ? tr("Results", "Matokeo") : tr("Popular now", "Zinazopendwa sasa")}
             </p>
             {loading && <Loader2 className="h-4 w-4 animate-spin text-brand-700" />}
           </div>
 
           <div className="mt-3 divide-y divide-zinc-100">
-            {!loading && results.length === 0 && (
+            {!loading && failed && (
+              <p role="alert" className="py-10 text-center text-sm text-zinc-600">
+                {t("common.network")}
+              </p>
+            )}
+            {!loading && !failed && query && results.length === 0 && (
               <div className="py-10 text-center">
                 <p className="font-display text-lg font-bold text-ink">
-                  No matches for “{query}”
+                  {tr(`No results for “${query}”`, `Hakuna matokeo ya “${query}”`)}
                 </p>
                 <p className="mt-1 text-sm text-zinc-500">
-                  Try a different name, category or brand.
+                  {tr("Try another word, e.g. dress, shoes or bag.", "Jaribu neno lingine, mfano gauni, viatu au mkoba.")}
                 </p>
               </div>
             )}
@@ -177,7 +184,7 @@ export function SearchOverlay({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-ink">{product.name}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
-                    {product.category} · {product.brand}
+                    {categoryLabel(product.category, language)} · {product.brand}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-brand-800">
                     {formatPrice(product.price, currency)}

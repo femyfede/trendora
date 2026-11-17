@@ -2,28 +2,25 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  ArrowRight,
-  CheckCircle2,
-  CreditCard,
-  Mail,
-  MapPin,
-  Package,
-  Truck
-} from "lucide-react";
+import { ArrowRight, CheckCircle2, CreditCard, MapPin, MessageCircle, Package, Truck } from "lucide-react";
 import { readDb } from "@/lib/db";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
-import { formatTZS, formatUSD, formatDate } from "@/lib/utils";
-import { PAYMENT_METHODS, REGIONS } from "@/lib/constants";
-import { verifyOrderAccessToken } from "@/lib/order-access";
+import { getTranslator } from "@/lib/i18n-server";
+import { formatTZS, formatUSD, formatDate, cn } from "@/lib/utils";
+import { ORDER_STATUS_LABELS, PAYMENT_METHODS, SITE, findRegion, formatEta } from "@/lib/constants";
+import { canViewOrder } from "@/lib/order-access";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Order Confirmation",
-  description: "Thank you for shopping with TRENDORA.",
-  robots: { index: false, follow: false }
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { tr } = await getTranslator();
+  return {
+    title: tr("Your order", "Oda yako"),
+    robots: { index: false, follow: false }
+  };
+}
+
+const PROGRESS = ["pending", "processing", "shipped", "completed"] as const;
 
 export default async function OrderPage({
   params,
@@ -32,41 +29,42 @@ export default async function OrderPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ success?: string; access?: string }>;
 }) {
-  const [{ id }, query] = await Promise.all([params, searchParams]);
+  const [{ id }, query, { tr, language }] = await Promise.all([params, searchParams, getTranslator()]);
   const db = await readDb();
   const order = db.orders.find((item) => item.id === id);
   if (!order) notFound();
   const [admin, user] = await Promise.all([isAdmin(), getCurrentUser()]);
-  if (
-    !admin &&
-    user?.id !== order.userId &&
-    !verifyOrderAccessToken(query.access ?? null, order.accessTokenHash)
-  ) {
+  if (!canViewOrder(order, { admin, userId: user?.id, accessToken: query.access ?? null })) {
     redirect("/account");
   }
 
-  const region = REGIONS.find((item) => item.name === order.customer.region);
-  const method =
-    PAYMENT_METHODS.find((item) => item.id === order.paymentMethod) ??
-    PAYMENT_METHODS[0];
+  const region = findRegion(order.customer.region);
+  const method = PAYMENT_METHODS.find((item) => item.id === order.paymentMethod) ?? PAYMENT_METHODS[0];
+  const statusIndex = PROGRESS.indexOf(order.status as (typeof PROGRESS)[number]);
+  const cancelled = order.status === "cancelled";
 
   return (
-    <div className="container-shell py-10 lg:py-16">
+    <div className="container-shell py-8 lg:py-14">
       {query.success && (
-        <div className="mx-auto max-w-3xl rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 text-center sm:p-8">
+        <div className="mx-auto max-w-3xl rounded-3xl border border-emerald-200 bg-emerald-50/70 p-6 text-center sm:p-8" role="status">
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-white text-emerald-600 shadow-sm">
             <CheckCircle2 className="h-7 w-7" />
           </span>
-          <h1 className="mt-4 font-display text-3xl font-extrabold tracking-tight text-ink">
-            Thank you, {order.customer.firstName}.
+          <h1 className="mt-4 font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+            {tr(`Thank you, ${order.customer.firstName}!`, `Asante, ${order.customer.firstName}!`)}
           </h1>
-          <p className="mt-2 text-sm text-zinc-600">
-            Your order has been received. A confirmation has been prepared for{" "}
-            <span className="font-semibold text-ink">{order.customer.email}</span>.
+          <p className="mt-2 text-base text-zinc-700">
+            {tr(
+              `We have received your order. We will call you on ${order.customer.phone} before delivery.`,
+              `Tumepokea oda yako. Tutakupigia kwenye ${order.customer.phone} kabla ya kukuletea.`
+            )}
           </p>
-          <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-bold text-emerald-800 shadow-sm">
+          <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-emerald-800 shadow-sm">
             <Package className="h-4 w-4" />
-            Order {order.id}
+            {tr("Order number:", "Namba ya oda:")} {order.id}
+          </p>
+          <p className="mt-3 text-xs text-zinc-600">
+            {tr("Save this page or your order number to check your order later.", "Hifadhi ukurasa huu au namba ya oda ili kufuatilia oda yako baadaye.")}
           </p>
         </div>
       )}
@@ -76,88 +74,94 @@ export default async function OrderPage({
           <section className="rounded-2xl border border-zinc-200 bg-white p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                  Order
-                </p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500">{tr("Order", "Oda")}</p>
                 <h2 className="mt-0.5 font-display text-xl font-extrabold">{order.id}</h2>
-                <p className="mt-1 text-[11px] text-zinc-500">
-                  Placed {formatDate(order.createdAt)}
+                <p className="mt-1 text-sm text-zinc-500">
+                  {tr("Placed on", "Iliwekwa")} {formatDate(order.createdAt, language)}
                 </p>
               </div>
-              <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                {order.status}
+              <span
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-xs font-bold",
+                  cancelled ? "bg-red-50 text-red-700" : order.status === "completed" ? "bg-emerald-50 text-emerald-700" : "bg-sun-100 text-amber-800"
+                )}
+              >
+                {ORDER_STATUS_LABELS[order.status][language]}
               </span>
             </div>
 
-            <div className="mt-5 divide-y divide-zinc-100 border-t border-zinc-100">
-              {order.items.map((item) => (
-                <div key={`${item.productId}-${item.size}-${item.color}`} className="flex gap-3 py-3">
-                  <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-lg bg-smoke">
-                    <Image
-                      src={item.image}
-                      alt={item.name}
-                      fill
-                      sizes="80px"
-                      className="object-cover"
+            {!cancelled && (
+              <ol className="mt-6 grid grid-cols-4 gap-2" aria-label={tr("Order progress", "Hatua za oda")}>
+                {PROGRESS.map((step, index) => (
+                  <li key={step} className="text-center">
+                    <span
+                      className={cn(
+                        "mx-auto block h-1.5 rounded-full",
+                        index <= statusIndex ? "bg-brand-700" : "bg-zinc-200"
+                      )}
                     />
+                    <span className={cn("mt-2 block text-[11px] font-semibold leading-tight sm:text-xs", index <= statusIndex ? "text-ink" : "text-zinc-400")}>
+                      {ORDER_STATUS_LABELS[step][language]}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+
+            <ul className="mt-6 divide-y divide-zinc-100 border-t border-zinc-100">
+              {order.items.map((item) => (
+                <li key={`${item.productId}-${item.size}-${item.color}`} className="flex gap-3 py-3">
+                  <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-lg bg-smoke">
+                    <Image src={item.image} alt={item.name} fill sizes="80px" className="object-cover" />
                   </div>
                   <div className="flex flex-1 flex-col">
-                    <Link
-                      href={`/product/${item.slug}`}
-                      className="text-sm font-semibold text-ink hover:text-brand-700"
-                    >
+                    <Link href={`/product/${item.slug}`} className="text-sm font-semibold text-ink hover:text-brand-700">
                       {item.name}
                     </Link>
-                    <p className="mt-0.5 text-[11px] text-zinc-500">
-                      Size {item.size} · {item.color}
+                    <p className="mt-0.5 text-sm text-zinc-600">
+                      {tr("Size", "Saizi")} {item.size} · {item.color} · ×{item.qty}
                     </p>
-                    <p className="text-[11px] text-zinc-500">Qty {item.qty}</p>
-                    <p className="mt-auto text-xs font-bold text-ink">
-                      {formatTZS(item.price * item.qty)}
-                    </p>
+                    <p className="mt-auto text-sm font-bold text-ink">{formatTZS(item.price * item.qty)}</p>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
 
-            <div className="mt-3 space-y-2 border-t border-zinc-100 pt-4 text-xs">
-              <div className="flex justify-between text-zinc-600">
-                <span>Subtotal</span>
-                <span>{formatTZS(order.subtotal)}</span>
+            <dl className="mt-3 space-y-2 border-t border-zinc-100 pt-4 text-sm">
+              <div className="flex justify-between text-zinc-700">
+                <dt>{tr("Subtotal", "Jumla ya bidhaa")}</dt>
+                <dd>{formatTZS(order.subtotal)}</dd>
               </div>
               {order.discountAmount > 0 && (
                 <div className="flex justify-between text-emerald-700">
-                  <span>Discount{order.discountCode ? ` (${order.discountCode})` : ""}</span>
-                  <span>−{formatTZS(order.discountAmount)}</span>
+                  <dt>
+                    {tr("Discount", "Punguzo")}
+                    {order.discountCode ? ` (${order.discountCode})` : ""}
+                  </dt>
+                  <dd>−{formatTZS(order.discountAmount)}</dd>
                 </div>
               )}
-              <div className="flex justify-between text-zinc-600">
-                <span>Delivery</span>
-                <span>
-                  {order.shippingFee === 0 ? "Free" : formatTZS(order.shippingFee)}
-                </span>
+              <div className="flex justify-between text-zinc-700">
+                <dt>{tr("Delivery", "Usafirishaji")}</dt>
+                <dd>{order.shippingFee === 0 ? tr("Free", "Bure") : formatTZS(order.shippingFee)}</dd>
               </div>
               <div className="flex items-baseline justify-between border-t border-zinc-100 pt-3">
-                <span className="font-semibold text-ink">Total</span>
-                <div className="text-right">
-                  <p className="font-display text-xl font-extrabold">
-                    {formatTZS(order.total)}
-                  </p>
-                  <p className="text-[10px] text-zinc-400">
-                    ≈ {formatUSD(order.total)}
-                  </p>
-                </div>
+                <dt className="font-semibold text-ink">{tr("Total", "Jumla")}</dt>
+                <dd className="text-right">
+                  <p className="font-display text-xl font-extrabold">{formatTZS(order.total)}</p>
+                  <p className="text-xs text-zinc-500">≈ {formatUSD(order.total)}</p>
+                </dd>
               </div>
-            </div>
+            </dl>
           </section>
 
           <section className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-              <h2 className="flex items-center gap-2 font-display text-sm font-extrabold">
+              <h2 className="flex items-center gap-2 font-display text-base font-extrabold">
                 <MapPin className="h-4 w-4 text-brand-700" />
-                Delivery address
+                {tr("Delivery address", "Mahali pa kuletewa")}
               </h2>
-              <p className="mt-3 text-xs leading-relaxed text-zinc-600">
+              <p className="mt-3 text-sm leading-relaxed text-zinc-700">
                 {order.customer.firstName} {order.customer.lastName}
                 <br />
                 {order.customer.address}
@@ -169,82 +173,71 @@ export default async function OrderPage({
                 {order.customer.phone}
               </p>
               {order.customer.notes && (
-                <p className="mt-2 rounded-lg bg-smoke px-2.5 py-2 text-[10px] text-zinc-500">
-                  Note: {order.customer.notes}
+                <p className="mt-2 rounded-lg bg-smoke px-2.5 py-2 text-xs text-zinc-600">
+                  {tr("Note:", "Maelekezo:")} {order.customer.notes}
                 </p>
               )}
             </div>
 
             <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-              <h2 className="flex items-center gap-2 font-display text-sm font-extrabold">
+              <h2 className="flex items-center gap-2 font-display text-base font-extrabold">
                 <Truck className="h-4 w-4 text-brand-700" />
-                Delivery estimate
+                {tr("Delivery time", "Muda wa kufika")}
               </h2>
-              <p className="mt-3 text-xs leading-relaxed text-zinc-600">
+              <p className="mt-3 text-sm leading-relaxed text-zinc-700">
                 {region
-                  ? `${region.name}: ${region.eta} after dispatch.`
-                  : "Our team will confirm the international delivery timeline by email."}
+                  ? tr(
+                      `${region.name}: ${formatEta(region.eta, "en")} after dispatch.`,
+                      `${region.name}: ${formatEta(region.eta, "sw")} baada ya kutumwa.`
+                    )
+                  : tr("We will confirm the delivery time with you by phone.", "Tutathibitisha muda wa kufika kwa simu.")}
               </p>
-              <p className="mt-2 text-[11px] text-zinc-500">
-                Orders are usually packed within 1 business day. You will be
-                contacted on {order.customer.phone} before delivery.
-              </p>
-              <h2 className="mt-4 flex items-center gap-2 font-display text-sm font-extrabold">
+              <h2 className="mt-4 flex items-center gap-2 font-display text-base font-extrabold">
                 <CreditCard className="h-4 w-4 text-brand-700" />
-                Payment
+                {tr("Payment", "Malipo")}
               </h2>
-              <p className="mt-1.5 text-xs text-zinc-600">{method.label}</p>
-              <p className="mt-1 text-[10px] leading-relaxed text-zinc-500">
-                {order.paymentMethod === "test"
-                  ? "Demo test payment completed in sandbox mode. No real money was charged."
-                  : order.paymentMethod === "cod"
-                    ? "Payment is due in cash when your order arrives. Please have the exact amount ready if possible."
-                    : "Mobile money integrations are not active yet. Our team will contact you."}
+              <p className="mt-1.5 text-sm font-medium text-zinc-800">{method.label[language]}</p>
+              <p className="mt-1 text-xs leading-relaxed text-zinc-600">
+                {order.paymentMethod === "cod"
+                  ? tr(
+                      "Pay in cash when your order arrives. Please have the exact amount ready if you can.",
+                      "Lipa pesa taslimu mzigo ukifika. Ikiwezekana andaa kiasi kamili."
+                    )
+                  : method.description[language]}
               </p>
             </div>
           </section>
-
-          <div className="rounded-2xl border border-zinc-200 bg-[#FAFBFB] p-5 text-center">
-            <Mail className="mx-auto h-5 w-5 text-brand-700" />
-            <p className="mt-2 text-xs font-semibold text-ink">Need to change something?</p>
-            <p className="mt-1 text-[11px] text-zinc-500">
-              Call us on +255 712 345 678 or email hello@trendora.co.tz and quote
-              your order number.
-            </p>
-          </div>
         </div>
 
         <aside>
           <div className="rounded-2xl border border-zinc-200 bg-white p-5 lg:sticky lg:top-24">
-            <h2 className="font-display text-lg font-extrabold">What happens next?</h2>
-            <ol className="mt-4 space-y-4 text-xs">
-              {[
-                ["Order received", "We have your order and are preparing it now."],
-                ["Quality check & packing", "Every piece is checked before it leaves our studio."],
-                ["Dispatch", "We hand your parcel to our delivery partner and contact you."],
-                ["Delivery", "Pay on delivery or receive your prepaid parcel."]
-              ].map(([title, body], index) => (
-                <li key={title} className="flex gap-3">
-                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-50 text-[10px] font-bold text-brand-700">
-                    {index + 1}
-                  </span>
-                  <div>
-                    <p className="font-semibold text-ink">{title}</p>
-                    <p className="mt-0.5 leading-relaxed text-zinc-500">{body}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-            <Link href="/shop" className="btn-primary mt-6 w-full">
-              Continue shopping
+            <h2 className="font-display text-lg font-extrabold">{tr("Need help with this order?", "Unahitaji msaada na oda hii?")}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+              {tr("Call or WhatsApp us and mention your order number.", "Tupigie au tutumie WhatsApp na utaje namba ya oda yako.")}
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <a href={`tel:${SITE.phoneHref}`} className="btn-outline px-3 py-3">
+                {tr("Call", "Piga simu")}
+              </a>
+              <a
+                href={`https://wa.me/${SITE.phoneHref.replace("+", "")}?text=${encodeURIComponent(`Oda ${order.id}`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-outline px-3 py-3"
+              >
+                <MessageCircle className="h-4 w-4 text-emerald-600" />
+                WhatsApp
+              </a>
+            </div>
+            <Link href="/shop" className="btn-primary mt-5 w-full">
+              {tr("Continue shopping", "Endelea kununua")}
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link
-              href="/account"
-              className="mt-2 block text-center text-[11px] font-semibold text-brand-700 hover:underline"
-            >
-              View account
-            </Link>
+            {user && (
+              <Link href="/account" className="mt-2 block py-2 text-center text-sm font-semibold text-brand-700 hover:underline">
+                {tr("See all my orders", "Tazama oda zangu zote")}
+              </Link>
+            )}
           </div>
         </aside>
       </div>

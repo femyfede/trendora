@@ -127,19 +127,20 @@ export function AdminClient() {
         paymentsRes.json(),
         settingsRes.json()
       ]);
-      setProducts(productsData);
-      setOrders(ordersData);
-      setDiscounts(discountsData);
-      setUsers(usersData);
-      setAnalytics(analyticsData);
-      setApplications(applicationsData.applications);
-      setPayments(paymentsData.payments);
-      setShopFee(
-        settingsData.settings.shopRegistrationFeeTzs == null
-          ? ""
-          : String(settingsData.settings.shopRegistrationFeeTzs)
-      );
-      setPaymentInstructions(settingsData.settings.shopPaymentInstructions || "");
+      // Only accept well-formed payloads so one failing endpoint cannot crash a whole tab.
+      setProducts(Array.isArray(productsData) ? productsData : []);
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
+      setDiscounts(Array.isArray(discountsData) ? discountsData : []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
+      setAnalytics(analyticsRes.ok && analyticsData?.overview ? analyticsData : null);
+      setApplications(Array.isArray(applicationsData?.applications) ? applicationsData.applications : []);
+      setPayments(Array.isArray(paymentsData?.payments) ? paymentsData.payments : []);
+      const settings = settingsData?.settings;
+      setShopFee(settings?.shopRegistrationFeeTzs == null ? "" : String(settings.shopRegistrationFeeTzs));
+      setPaymentInstructions(settings?.shopPaymentInstructions || "");
+      const failed = [productsRes, ordersRes, discountsRes, usersRes, analyticsRes, applicationsRes, paymentsRes, settingsRes]
+        .filter((response) => !response.ok).length;
+      if (failed) toast(`${failed} dashboard section(s) could not be loaded.`, "error");
     } catch {
       toast("Could not load dashboard data.", "error");
     } finally {
@@ -1143,12 +1144,12 @@ export function AdminClient() {
 
               <div className="rounded-2xl border border-zinc-200 bg-white">
                 <div className="border-b border-zinc-100 px-5 py-4">
-                  <h2 className="font-display text-sm font-extrabold">Conversion</h2>
+                  <h2 className="font-display text-sm font-extrabold">Customers</h2>
                 </div>
                 <div className="p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-zinc-600">Conversion Rate</span>
-                    <span className="font-display text-lg font-extrabold text-brand-700">{analytics.overview.conversionRate}%</span>
+                    <span className="text-xs text-zinc-600">Orders completed</span>
+                    <span className="font-display text-lg font-extrabold text-brand-700">{analytics.overview.completionRate}%</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-zinc-600">New Customers (30d)</span>

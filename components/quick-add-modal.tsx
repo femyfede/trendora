@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Check, ShoppingBag, X } from "lucide-react";
 import type { Product } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, stockLabel } from "@/lib/utils";
+import { categoryLabel } from "@/lib/constants";
 import { useStore } from "./store-context";
 import { QuantitySelector } from "./quantity-selector";
 import { Rating } from "./rating";
@@ -19,7 +20,7 @@ export function QuickAddModal({
   open: boolean;
   onClose: () => void;
 }) {
-  const { addToCart, format, language } = useStore();
+  const { addToCart, format, language, tr } = useStore();
   const [size, setSize] = useState("");
   const [color, setColor] = useState("");
   const [qty, setQty] = useState(1);
@@ -50,19 +51,11 @@ export function QuickAddModal({
   const add = () => {
     if (soldOut) return;
     if (!size) {
-      setError(
-        language === "sw"
-          ? "Tafadhali chagua ukubwa."
-          : "Please select a size."
-      );
+      setError(tr("Please choose a size.", "Tafadhali chagua saizi."));
       return;
     }
     if (!color) {
-      setError(
-        language === "sw"
-          ? "Tafadhali chagua rangi."
-          : "Please select a colour."
-      );
+      setError(tr("Please choose a colour.", "Tafadhali chagua rangi."));
       return;
     }
     addToCart({ product, size, color, qty });
@@ -74,7 +67,7 @@ export function QuickAddModal({
       className="fixed inset-0 z-[115] flex items-end justify-center bg-ink/55 p-0 backdrop-blur-sm animate-fade-in sm:items-center sm:p-6"
       role="dialog"
       aria-modal="true"
-      aria-label={`Quick add ${product.name}`}
+      aria-label={product.name}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -84,7 +77,7 @@ export function QuickAddModal({
           type="button"
           onClick={onClose}
           className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-white/95 text-zinc-600 shadow-sm transition hover:text-ink"
-          aria-label="Close quick add"
+          aria-label={tr("Close", "Funga")}
         >
           <X className="h-4 w-4" />
         </button>
@@ -102,16 +95,14 @@ export function QuickAddModal({
 
           <div className="p-5 sm:p-7">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-              {product.brand} · {product.category}
+              {product.brand} · {categoryLabel(product.category, language)}
             </p>
             <h2 className="mt-1.5 font-display text-2xl font-extrabold tracking-tight text-ink">
               {product.name}
             </h2>
-            <Rating
-              rating={product.rating}
-              reviewCount={product.reviewCount}
-              className="mt-2"
-            />
+            {product.reviewCount > 0 && (
+              <Rating rating={product.rating} reviewCount={product.reviewCount} className="mt-2" />
+            )}
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-lg font-bold text-ink">{format(product.price)}</span>
               {product.compareAtPrice && (
@@ -123,15 +114,15 @@ export function QuickAddModal({
 
             <div className="mt-5">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-ink">
-                  Size {size && <span className="text-brand-700">· {size}</span>}
+                <p className="text-sm font-semibold text-ink">
+                  {tr("Size", "Saizi")} {size && <span className="text-brand-700">· {size}</span>}
                 </p>
                 <Link
                   href={`/product/${product.slug}`}
                   className="text-[11px] font-medium text-brand-700 underline-offset-2 hover:underline"
                   onClick={onClose}
                 >
-                  Size guide
+                  {tr("Size guide", "Mwongozo wa saizi")}
                 </Link>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -144,7 +135,7 @@ export function QuickAddModal({
                       setError("");
                     }}
                     className={cn(
-                      "min-w-[42px] rounded-lg border px-3 py-2 text-xs font-semibold transition",
+                      "min-h-[44px] min-w-[48px] rounded-lg border px-3 py-2 text-sm font-semibold transition",
                       size === item
                         ? "border-ink bg-ink text-white"
                         : "border-zinc-200 bg-white text-zinc-700 hover:border-ink"
@@ -158,8 +149,8 @@ export function QuickAddModal({
             </div>
 
             <div className="mt-5">
-              <p className="text-xs font-semibold text-ink">
-                Colour {color && <span className="text-brand-700">· {color}</span>}
+              <p className="text-sm font-semibold text-ink">
+                {tr("Colour", "Rangi")} {color && <span className="text-brand-700">· {color}</span>}
               </p>
               <div className="mt-2 flex flex-wrap gap-2.5">
                 {product.colors.map((item) => (
@@ -171,7 +162,7 @@ export function QuickAddModal({
                       setError("");
                     }}
                     className={cn(
-                      "grid h-8 w-8 place-items-center rounded-full border-2 transition",
+                      "grid h-11 w-11 place-items-center rounded-full border-2 transition",
                       color === item.name
                         ? "border-ink"
                         : "border-transparent hover:border-zinc-300"
@@ -181,7 +172,7 @@ export function QuickAddModal({
                     title={item.name}
                   >
                     <span
-                      className="h-6 w-6 rounded-full border border-black/5"
+                      className="grid h-8 w-8 place-items-center rounded-full border border-black/5"
                       style={{ backgroundColor: item.hex }}
                     >
                       {color === item.name && (
@@ -218,22 +209,12 @@ export function QuickAddModal({
                       : "text-emerald-700"
                 )}
               >
-                {soldOut
-                  ? language === "sw"
-                    ? "Imeisha"
-                    : "Sold out"
-                  : product.stock <= 5
-                    ? language === "sw"
-                      ? `Zimebaki ${product.stock}`
-                      : `Only ${product.stock} left`
-                    : language === "sw"
-                      ? "Ipo stoo"
-                      : "In stock"}
+                {stockLabel(product.stock, language)}
               </span>
             </div>
 
             {error && (
-              <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+              <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
                 {error}
               </p>
             )}
@@ -245,13 +226,7 @@ export function QuickAddModal({
               className="btn-primary mt-4 w-full"
             >
               <ShoppingBag className="h-4 w-4" />
-              {soldOut
-                ? language === "sw"
-                  ? "Imeisha"
-                  : "Sold out"
-                : language === "sw"
-                  ? "Ongeza kwenye Kikapu"
-                  : "Add to Cart"}
+              {soldOut ? tr("Sold out", "Imeisha") : tr("Add to cart", "Weka kwenye kikapu")}
             </button>
 
             <Link
@@ -259,7 +234,7 @@ export function QuickAddModal({
               onClick={onClose}
               className="mt-3 block text-center text-xs font-medium text-zinc-500 underline-offset-2 hover:text-brand-700 hover:underline"
             >
-              View full product details
+              {tr("See full product details", "Tazama maelezo kamili ya bidhaa")}
             </Link>
           </div>
         </div>

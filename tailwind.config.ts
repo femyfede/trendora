@@ -21,10 +21,24 @@ const config: Config = {
           900: "#0C3F49",
           950: "#06272E"
         },
+        // Warm accents drawn from kanga prints and terracotta: use sparingly for emphasis.
+        clay: {
+          50: "#FCF3EE",
+          100: "#F8E1D5",
+          200: "#EFC0A8",
+          500: "#C8623A",
+          600: "#B0522D",
+          700: "#8E4124"
+        },
+        sun: {
+          100: "#FBEFD3",
+          400: "#E9B64A",
+          500: "#D99A21"
+        },
         ink: "#0B0F10",
         smoke: "#F5F7F7",
         blush: "#F6DAD5",
-        sand: "#EFE9DF"
+        sand: "#F7F3EC"
       },
       fontFamily: {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
