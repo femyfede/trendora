@@ -1,134 +1,147 @@
 import type { Language } from "./types";
 
+export const DEFAULT_LANGUAGE: Language = "sw";
+export const LANGUAGE_COOKIE = "trendora_lang";
+
+export function normalizeLanguage(value: unknown): Language {
+  return value === "en" ? "en" : DEFAULT_LANGUAGE;
+}
+
+/** Picks the English or Kiswahili variant of a string. */
+export function pick(language: Language, en: string, sw: string) {
+  return language === "en" ? en : sw;
+}
+
+// [English, Kiswahili]
 const dict = {
-  "nav.home": ["Home", "Nyumbani"],
-  "nav.shop": ["Shop", "Duka"],
-  "nav.shops": ["Marketplace shops", "Maduka"],
-  "nav.men": ["Men", "Wanaume"],
-  "nav.women": ["Women", "Wanawake"],
-  "nav.new": ["New Arrivals", "Mpya"],
+  "nav.home": ["Home", "Mwanzo"],
+  "nav.shop": ["Products", "Bidhaa"],
+  "nav.shops": ["Shops", "Maduka"],
   "nav.collections": ["Collections", "Mikusanyiko"],
-  "nav.contact": ["Contact", "Wasiliana"],
-  "announce.support": ["Customer support", "Huduma kwa wateja"],
+  "nav.about": ["About Us", "Kuhusu Sisi"],
+  "nav.contact": ["Contact Us", "Wasiliana Nasi"],
+  "nav.addShop": ["Register Your Shop", "Sajili Duka Lako"],
+  "nav.account": ["My Account", "Akaunti Yangu"],
+  "nav.login": ["Log in", "Ingia"],
+  "nav.register": ["Sign up", "Jisajili"],
+  "nav.wishlist": ["Saved items", "Nilivyopenda"],
+  "nav.cart": ["Cart", "Kikapu"],
+  "nav.search": ["Search", "Tafuta"],
   "announce.promo": [
-    "Free delivery on orders over TZS 150,000 — don't miss this chance.",
-    "Usafirishaji bure kwa oda zaidi ya TZS 150,000 — usikose nafasi hii."
+    "Free delivery on orders over TZS 150,000 anywhere in Tanzania",
+    "Usafirishaji bure kwa oda ya zaidi ya TZS 150,000 popote Tanzania"
   ],
-  "hero.eyebrow": ["New season. New style.", "Msimu mpya. Mtindo mpya."],
-  "hero.title": ["Dress Smart,\nLook Trendy.", "Vaa kwa Akili,\nOnekane wa Kisasa."],
+  "hero.eyebrow": ["Tanzania's online market", "Soko la mtandaoni la Tanzania"],
+  "hero.title": ["Shop local.\nShop with confidence.", "Nunua bidhaa za nyumbani\nkwa uhakika."],
   "hero.sub": [
-    "Discover your style with our latest fashion collections.",
-    "Gundua mtindo wako na mikusanyiko yetu ya hivi karibuni."
+    "Clothes, shoes, bags and more from trusted Tanzanian sellers, delivered to your door. Pay when it arrives.",
+    "Nguo, viatu, mikoba na zaidi kutoka kwa wauzaji wa Tanzania wanaoaminika. Tunakuletea mlangoni, unalipa ukipokea."
   ],
-  "hero.note": ["Up to 30% off selected styles.", "Punguzo hadi 30% kwa mitindo teule."],
-  "hero.eyebrow2": ["The everyday edit", "Mkusanyiko wa kila siku"],
-  "hero.title2": ["Easy Pieces,\nEndless Looks.", "Vipande Rahisi,\nMitindo Bila Mwisho."],
+  "hero.eyebrow2": ["For business owners", "Kwa wafanyabiashara"],
+  "hero.title2": ["Bring your shop\nonline today.", "Peleka duka lako\nmtandaoni leo."],
   "hero.sub2": [
-    "Build a wardrobe that works as hard as you do.",
-    "Jenga vazia linalokufaa kila siku."
+    "Register your shop, get verified and let customers across Tanzania find you and call you directly.",
+    "Sajili duka lako, lithibitishwe, na wateja kutoka kila kona ya Tanzania wakupate na kukupigia moja kwa moja."
   ],
-  "hero.note2": ["New basics, made to layer.", "Mavazi mapya ya msingi, kwa tabaka."],
-  "hero.eyebrow3": ["Made for Tanzania", "Imetengenezwa kwa Tanzania"],
-  "hero.title3": ["Local Style,\nGlobal Energy.", "Mtindo wa Nyumbani,\nNguvu ya Kimataifa."],
+  "hero.eyebrow3": ["From Dar to Zanzibar", "Kutoka Dar hadi Zanzibar"],
+  "hero.title3": ["Style that feels\nlike home.", "Mitindo yenye\nladha ya nyumbani."],
   "hero.sub3": [
-    "Considered fashion, delivered across Tanzania.",
-    "Mitindo teule, inawasilishwa kote Tanzania."
+    "Delivery to all 31 regions of Tanzania. Dar es Salaam in 1 to 2 days.",
+    "Tunafikisha mikoa yote 31 ya Tanzania. Dar es Salaam ndani ya siku 1 hadi 2."
   ],
-  "hero.note3": ["Delivery from Dar es Salaam to Zanzibar.", "Uwasilishaji kutoka Dar es Salaam hadi Zanzibar."],
-  "hero.cta": ["Shop Now", "Nunua Sasa"],
-  "benefits.freeTitle": ["Free Shipping", "Usafirishaji Bure"],
-  "benefits.freeSub": ["On qualifying orders.", "Kwa oda zinazostahili."],
-  "benefits.secureTitle": ["Secure Payments", "Malipo Salama"],
-  "benefits.secureSub": ["Safe and reliable checkout.", "Malipo salama na ya kuaminika."],
-  "benefits.returnsTitle": ["Easy Returns", "Kurudisha kwa Urahisi"],
-  "benefits.returnsSub": ["Hassle-free return process.", "Mchakato rahisi wa kurudisha."],
-  "benefits.supportTitle": ["Customer Support", "Huduma kwa Wateja"],
-  "benefits.supportSub": ["We're here to help.", "Tuko hapa kukusaidia."],
-  "sections.categories.title": ["Explore Top Collections", "Chunguza Mikusanyiko"],
-  "sections.categories.sub": [
-    "Find your style from our latest collections.",
-    "Pata mtindo wako kutoka mikusanyiko yetu mipya."
-  ],
-  "sections.categories.kicker": ["Shop by category", "Nunua kwa aina"],
-  "sections.best.kicker": ["Curated weekly", "Mkusanyiko wa wiki"],
-  "sections.new.kicker": ["Just landed", "Imetua sasa"],
-  "sections.best.title": ["Weekly Top Sellers", "Wauzaji Bora wa Wiki"],
+  "hero.cta": ["Start shopping", "Anza kununua"],
+  "hero.cta2": ["Register your shop", "Sajili duka lako"],
+  "benefits.freeTitle": ["Free delivery", "Usafirishaji bure"],
+  "benefits.freeSub": ["On orders over TZS 150,000.", "Kwa oda ya zaidi ya TZS 150,000."],
+  "benefits.secureTitle": ["Pay on delivery", "Lipa ukipokea"],
+  "benefits.secureSub": ["Pay cash when your order arrives.", "Unalipa pesa taslimu mzigo ukifika."],
+  "benefits.returnsTitle": ["Easy returns", "Kurudisha ni rahisi"],
+  "benefits.returnsSub": ["Within 14 days of delivery.", "Ndani ya siku 14 baada ya kupokea."],
+  "benefits.supportTitle": ["Help in Kiswahili", "Msaada kwa Kiswahili"],
+  "benefits.supportSub": ["Call or WhatsApp our team.", "Piga simu au tuma WhatsApp."],
+  "sections.categories.title": ["What are you looking for?", "Unatafuta nini leo?"],
+  "sections.categories.kicker": ["Shop by category", "Chagua aina"],
+  "sections.best.kicker": ["Customer favourites", "Wateja wanapenda"],
+  "sections.best.title": ["Best sellers this week", "Zinazouzika zaidi wiki hii"],
   "sections.best.sub": [
-    "Shop the most popular items currently trending.",
-    "Nunua bidhaa maarufu zinazovuma sasa."
+    "The pieces customers across Tanzania are buying right now.",
+    "Bidhaa ambazo wateja kote Tanzania wananunua sasa hivi."
   ],
-  "sections.viewAll": ["View All Products", "Tazama Bidhaa Zote"],
-  "sections.new.title": ["New Arrivals", "Bidhaa Mpya"],
-  "sections.new.sub": ["Fresh drops, just for you.", "Bidhaa mpya, kwa ajili yako."],
-  "sections.new.cta": ["Shop New Arrivals", "Nunua Bidhaa Mpya"],
-  "promo.label": ["The Trendora Edit", "Mkusanyiko wa Trendora"],
-  "promo.title": ["Your Style,\nYour Story.", "Mtindo Wako,\nHadithi Yako."],
-  "promo.sub": [
-    "Refresh your wardrobe with pieces made for every occasion.",
-    "Sasisha vazia lako kwa vipande vinavyofaa kila tukio."
-  ],
-  "promo.cta": ["Explore Collection", "Chunguza Mkusanyiko"],
-  "newsletter.title": ["Join the Trendora list", "Jiunge na orodha ya Trendora"],
+  "sections.viewAll": ["See all products", "Tazama bidhaa zote"],
+  "sections.new.kicker": ["Just arrived", "Zimefika sasa hivi"],
+  "sections.new.title": ["New arrivals", "Bidhaa mpya"],
+  "sections.new.sub": ["Fresh styles added this month.", "Mitindo mipya iliyoongezwa mwezi huu."],
+  "sections.new.cta": ["See new arrivals", "Tazama bidhaa mpya"],
+  "newsletter.title": ["Hear about new arrivals first", "Pata habari za bidhaa mpya kwanza"],
   "newsletter.sub": [
-    "Get first access to new drops, exclusive offers and style notes.",
-    "Pata bidhaa mpya kwanza, ofa maalum na vidokezo vya mitindo."
+    "One short email when new stock and offers arrive. No spam.",
+    "Barua pepe fupi moja bidhaa mpya na ofa zikifika. Hatutakusumbua."
   ],
   "newsletter.placeholder": ["Your email address", "Barua pepe yako"],
-  "newsletter.button": ["Subscribe", "Jiandikishe"],
-  "newsletter.success": ["You're on the list. Karibu Trendora!", "Umejiunga. Karibu Trendora!"],
+  "newsletter.button": ["Subscribe", "Jiunge"],
+  "newsletter.success": ["You're subscribed. Karibu!", "Umejiunga. Karibu sana!"],
+  "newsletter.already": ["You're already subscribed.", "Tayari umejiunga."],
   "newsletter.error": ["Enter a valid email address.", "Weka barua pepe sahihi."],
   "newsletter.privacy": [
-    "We respect your privacy. Unsubscribe anytime.",
-    "Tunaheshimu faragha yako. Unaweza kujiondoa wakati wowote."
+    "You can unsubscribe at any time.",
+    "Unaweza kujiondoa wakati wowote."
   ],
   "footer.about": [
-    "Modern, considered fashion from Dar es Salaam to the world. Designed for real life, made to be worn on repeat.",
-    "Mitindo ya kisasa kutoka Dar es Salaam kwa dunia. Imebuniwa kwa maisha halisi, ivae tena na tena."
+    "A Tanzanian online market for fashion and local shops. Built in Dar es Salaam for customers and sellers across the country.",
+    "Soko la mtandaoni la mitindo na maduka ya Tanzania. Limejengwa Dar es Salaam kwa ajili ya wateja na wauzaji wa nchi nzima."
   ],
-  "footer.shop": ["Shop", "Duka"],
-  "footer.help": ["Customer Care", "Huduma kwa Wateja"],
-  "footer.contact": ["Get in touch", "Wasiliana nasi"],
+  "footer.shop": ["Shop", "Nunua"],
+  "footer.help": ["Help", "Msaada"],
+  "footer.contact": ["Talk to us", "Ongea nasi"],
   "footer.newsletter": ["Newsletter", "Jarida"],
   "footer.rights": ["All rights reserved.", "Haki zote zimehifadhiwa."],
   "footer.privacy": ["Privacy Policy", "Sera ya Faragha"],
-  "footer.terms": ["Terms & Conditions", "Sheria na Masharti"],
-  "footer.returns": ["Returns Policy", "Sera ya Kurudisha"],
-  "cart.title": ["Your Cart", "Kikapu Chako"],
-  "cart.empty": ["Your cart is empty.", "Kikapu chako ni tupu."],
+  "footer.terms": ["Terms & Conditions", "Vigezo na Masharti"],
+  "footer.returns": ["Returns Policy", "Sera ya Kurudisha Bidhaa"],
+  "cart.title": ["Your cart", "Kikapu chako"],
+  "cart.empty": ["Your cart is empty", "Kikapu chako hakina kitu"],
   "cart.emptySub": [
-    "Discover new pieces and make them yours.",
-    "Gundua vipande vipya na vifanye vyako."
+    "Browse our products and add the ones you like.",
+    "Pitia bidhaa zetu na uongeze unazopenda."
   ],
   "cart.continue": ["Continue shopping", "Endelea kununua"],
-  "cart.subtotal": ["Subtotal", "Jumla ndogo"],
-  "cart.shipping": ["Shipping", "Usafirishaji"],
+  "cart.subtotal": ["Subtotal", "Jumla ya bidhaa"],
+  "cart.shipping": ["Delivery", "Usafirishaji"],
   "cart.discount": ["Discount", "Punguzo"],
   "cart.total": ["Total", "Jumla"],
-  "cart.checkout": ["Proceed to Checkout", "Nenda kwa Malipo"],
+  "cart.checkout": ["Continue to checkout", "Endelea kulipia"],
   "cart.remove": ["Remove", "Ondoa"],
   "cart.quantity": ["Quantity", "Idadi"],
-  "cart.summary": ["Order Summary", "Muhtasari wa Oda"],
-  "cart.coupon": ["Discount code", "Msimbo wa punguzo"],
+  "cart.summary": ["Order summary", "Muhtasari wa oda"],
+  "cart.coupon": ["Discount code", "Kuponi ya punguzo"],
   "cart.apply": ["Apply", "Tumia"],
-  "cart.freeShip": ["You've unlocked free shipping.", "Umepata usafirishaji bure."],
+  "cart.freeShip": ["You qualify for free delivery.", "Umepata usafirishaji bure."],
   "cart.freeShipLeft": [
-    "away from free shipping.",
-    "kabla ya kupata usafirishaji bure."
+    "more for free delivery.",
+    "zaidi upate usafirishaji bure."
   ],
   "common.search": ["Search products", "Tafuta bidhaa"],
-  "common.addToCart": ["Add to Cart", "Ongeza kwenye Kikapu"],
+  "common.addToCart": ["Add to cart", "Weka kwenye kikapu"],
   "common.viewAll": ["View all", "Tazama zote"],
-  "common.loading": ["Loading", "Inapakia"],
-  "common.inStock": ["In stock", "Ipo stoo"],
+  "common.loading": ["Loading…", "Inapakia…"],
+  "common.inStock": ["In stock", "Ipo"],
   "common.soldOut": ["Sold out", "Imeisha"],
   "common.close": ["Close", "Funga"],
-  "common.menu": ["Menu", "Menyu"]
+  "common.menu": ["Menu", "Menyu"],
+  "common.free": ["Free", "Bure"],
+  "common.tryAgain": ["Try again", "Jaribu tena"],
+  "common.error": ["Something went wrong. Please try again.", "Kuna tatizo limetokea. Tafadhali jaribu tena."],
+  "common.network": [
+    "Could not connect. Check your internet and try again.",
+    "Imeshindwa kuunganisha. Angalia intaneti yako kisha ujaribu tena."
+  ],
+  "common.wait": ["Please wait…", "Subiri kidogo…"]
 } as const;
 
 export type TranslationKey = keyof typeof dict;
 
 export function translate(key: TranslationKey, language: Language) {
-  return dict[key][language === "sw" ? 1 : 0];
+  return dict[key][language === "en" ? 0 : 1];
 }
 
 export { dict };

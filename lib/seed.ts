@@ -1,5 +1,10 @@
 import type { Database, Product, User, Review, ShopApplication, Shop, PaymentRecord } from "./types";
+import { randomBytes } from "crypto";
 import { hashPassword } from "./auth";
+
+// Seeded accounts get an unguessable random password so nobody can sign in with
+// credentials published in source control. Reset them from the admin side if needed.
+const lockedPassword = () => hashPassword(randomBytes(24).toString("hex"));
 
 const u = (id: string, w = 900) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
@@ -669,7 +674,7 @@ export const seedDatabase = (): Database => ({
       id: "user-admin",
       name: "Admin User",
       email: "admin@trendora.co.tz",
-      passwordHash: hashPassword("trendora2026"),
+      passwordHash: lockedPassword(),
       role: "admin",
       isActive: true,
       lastLoginAt: null,
@@ -680,7 +685,7 @@ export const seedDatabase = (): Database => ({
       id: "user-manager",
       name: "Store Manager",
       email: "manager@trendora.co.tz",
-      passwordHash: hashPassword("manager2026"),
+      passwordHash: lockedPassword(),
       role: "manager",
       isActive: true,
       lastLoginAt: null,
@@ -691,7 +696,7 @@ export const seedDatabase = (): Database => ({
       id: "user-demo",
       name: "Demo Customer",
       email: "demo@trendora.co.tz",
-      passwordHash: hashPassword("demo1234"),
+      passwordHash: lockedPassword(),
       role: "customer",
       isActive: true,
       lastLoginAt: null,

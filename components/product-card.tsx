@@ -8,7 +8,7 @@ import { cn, discountPercent, stockLabel, stockTone } from "@/lib/utils";
 import { useStore } from "./store-context";
 import { Rating } from "./rating";
 import { QuickAddModal } from "./quick-add-modal";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 export function ProductCard({
   product,
@@ -19,8 +19,9 @@ export function ProductCard({
   priority?: boolean;
   className?: string;
 }) {
-  const { format, toggleWishlist, isWishlisted, language } = useStore();
+  const { format, toggleWishlist, isWishlisted, language, tr } = useStore();
   const [quickOpen, setQuickOpen] = useState(false);
+  const closeQuick = useCallback(() => setQuickOpen(false), []);
   const percent = discountPercent(product);
   const wishlisted = isWishlisted(product.id);
   const soldOut = product.stock <= 0;
@@ -37,7 +38,7 @@ export function ProductCard({
           <Link
             href={`/product/${product.slug}`}
             className="absolute inset-0"
-            aria-label={`View ${product.name}`}
+            aria-label={tr(`View ${product.name}`, `Tazama ${product.name}`)}
           >
             <Image
               src={product.images[0]}
@@ -54,18 +55,18 @@ export function ProductCard({
 
           <div className="pointer-events-none absolute left-3 top-3 flex flex-col items-start gap-1.5">
             {percent > 0 && (
-              <span className="rounded-full bg-[#D95670] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              <span className="rounded-full bg-clay-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
                 -{percent}%
               </span>
             )}
             {product.isNew && (
               <span className="rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-ink shadow-sm">
-                New
+                {tr("New", "Mpya")}
               </span>
             )}
             {product.isBestSeller && (
               <span className="rounded-full bg-brand-700 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
-                Best Seller
+                {tr("Best seller", "Inauzika")}
               </span>
             )}
             {soldOut && (
@@ -80,8 +81,8 @@ export function ProductCard({
             onClick={() => toggleWishlist(product)}
             aria-label={
               wishlisted
-                ? `Remove ${product.name} from wishlist`
-                : `Add ${product.name} to wishlist`
+                ? tr(`Remove ${product.name} from saved items`, `Ondoa ${product.name} kwenye ulivyopenda`)
+                : tr(`Save ${product.name}`, `Hifadhi ${product.name}`)
             }
             aria-pressed={wishlisted}
             className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/95 text-ink shadow-sm transition hover:scale-105 hover:bg-white"
@@ -89,7 +90,7 @@ export function ProductCard({
             <Heart
               className={cn(
                 "h-[17px] w-[17px]",
-                wishlisted && "fill-[#D95670] text-[#D95670]"
+                wishlisted && "fill-clay-500 text-clay-500"
               )}
             />
           </button>
@@ -98,8 +99,8 @@ export function ProductCard({
             type="button"
             onClick={() => setQuickOpen(true)}
             disabled={soldOut}
-            aria-label={`Quick add ${product.name} to cart`}
-            className="absolute bottom-3 right-3 grid h-10 w-10 place-items-center rounded-full bg-brand-700 text-white shadow-lg shadow-brand-900/25 transition hover:scale-105 hover:bg-brand-800 disabled:cursor-not-allowed disabled:bg-zinc-400 disabled:shadow-none"
+            aria-label={tr(`Add ${product.name} to cart`, `Weka ${product.name} kwenye kikapu`)}
+            className="absolute bottom-3 right-3 grid h-11 w-11 place-items-center rounded-full bg-brand-700 text-white shadow-lg shadow-brand-900/25 transition hover:scale-105 hover:bg-brand-800 disabled:cursor-not-allowed disabled:bg-zinc-400 disabled:shadow-none"
           >
             <ShoppingBag className="h-[17px] w-[17px]" />
           </button>
@@ -111,17 +112,19 @@ export function ProductCard({
           </p>
           <Link
             href={`/product/${product.slug}`}
-            className="mt-1 line-clamp-2-safe font-display text-[13px] font-bold leading-snug text-ink transition hover:text-brand-700 sm:text-[15px]"
+            className="mt-1 line-clamp-2-safe font-display text-sm font-bold leading-snug text-ink transition hover:text-brand-700 sm:text-[15px]"
           >
             {product.name}
           </Link>
 
-          <Rating
-            rating={product.rating}
-            reviewCount={product.reviewCount}
-            compact
-            className="mt-1.5"
-          />
+          {product.reviewCount > 0 && (
+            <Rating
+              rating={product.rating}
+              reviewCount={product.reviewCount}
+              compact
+              className="mt-1.5"
+            />
+          )}
 
           <div className="mt-2 flex items-end justify-between gap-2">
             <div className="flex flex-wrap items-baseline gap-x-2">
@@ -149,7 +152,7 @@ export function ProductCard({
             />
             <span
               className={cn(
-                "text-[10px] font-medium sm:text-[11px]",
+                "text-xs font-medium",
                 stockTone(product.stock)
               )}
             >
@@ -162,7 +165,7 @@ export function ProductCard({
       <QuickAddModal
         product={product}
         open={quickOpen}
-        onClose={() => setQuickOpen(false)}
+        onClose={closeQuick}
       />
     </>
   );

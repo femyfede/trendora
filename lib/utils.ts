@@ -39,8 +39,8 @@ export function discountPercent(product: Pick<Product, "price" | "compareAtPrice
 export function stockLabel(stock: number, language: Language = "en") {
   if (stock <= 0) return language === "sw" ? "Imeisha" : "Sold out";
   if (stock <= 5)
-    return language === "sw" ? `Zimebaki ${stock}` : `Only ${stock} left`;
-  return language === "sw" ? "Ipo stoo" : "In stock";
+    return language === "sw" ? `Zimebaki ${stock} tu` : `Only ${stock} left`;
+  return language === "sw" ? "Ipo" : "In stock";
 }
 
 export function stockTone(stock: number) {
@@ -93,3 +93,40 @@ export function clamp(value: number, min: number, max: number) {
 export function paramCategory(value: string | null): string {
   return value ? decodeURIComponent(value) : "";
 }
+
+/** Converts a Tanzanian number (07…, +2557…, 2557…) into the digits WhatsApp links expect. */
+export function whatsappNumber(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (digits.startsWith("0")) return `255${digits.slice(1)}`;
+  return digits;
+}
+
+export function telHref(value: string) {
+  return `tel:${value.replace(/[^\d+]/g, "")}`;
+}
+
+/**
+ * Case-insensitive product search across name, brand, category and the
+ * category's Kiswahili name, so "viatu" finds shoes and "gauni" finds dresses.
+ */
+export function matchesSearch(
+  product: Pick<Product, "name" | "brand" | "category" | "description">,
+  query: string
+) {
+  const value = query.trim().toLowerCase();
+  if (!value) return true;
+  const category = CATEGORY_SEARCH_TERMS[product.category] ?? "";
+  const haystack = `${product.name} ${product.brand} ${product.category} ${category} ${product.description}`.toLowerCase();
+  return value.split(/\s+/).every((word) => haystack.includes(word));
+}
+
+const CATEGORY_SEARCH_TERMS: Record<string, string> = {
+  Women: "wanawake mwanamke kike",
+  Men: "wanaume mwanaume kiume",
+  Dresses: "gauni magauni dress",
+  "Crop Tops": "blauzi blausi top tops shati",
+  Shoes: "viatu kiatu sandals raba",
+  Bags: "mkoba mikoba begi",
+  Accessories: "mapambo hereni cheni bangili miwani",
+  Swimwear: "pwani kuogelea ufukweni beach"
+};

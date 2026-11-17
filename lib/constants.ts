@@ -2,27 +2,34 @@ import type { Category, Currency, Language } from "./types";
 
 export const SITE = {
   name: "TRENDORA",
-  tagline: "Modern fashion, made for you.",
+  tagline: "Mitindo ya kisasa na maduka ya Tanzania, sehemu moja.",
   phone: "+255 712 345 678",
   phoneHref: "+255712345678",
   whatsapp: "+255 712 345 678",
   email: "hello@trendora.co.tz",
-  address: "Msasani Peninsula, Dar es Salaam, Tanzania",
-  hours: "Mon – Sat, 9:00 – 19:00 EAT"
+  address: "Msasani, Dar es Salaam, Tanzania",
+  hours: {
+    en: "Mon – Sat, 9:00 – 19:00 EAT",
+    sw: "Jumatatu – Jumamosi, saa 3 asubuhi – saa 1 jioni"
+  }
 };
 
 export const FREE_SHIPPING_THRESHOLD = 150000;
 export const USD_RATE = 2600;
 
 export const CURRENCIES: { value: Currency; label: string }[] = [
-  { value: "TZS", label: "TZS Shilling" },
-  { value: "USD", label: "USD Dollar" }
+  { value: "TZS", label: "TZS" },
+  { value: "USD", label: "USD" }
 ];
 
-export const LANGUAGES: { value: Language; label: string }[] = [
-  { value: "sw", label: "Kiswahili" },
-  { value: "en", label: "English" }
+export const LANGUAGES: { value: Language; label: string; short: string }[] = [
+  { value: "sw", label: "Kiswahili", short: "SW" },
+  { value: "en", label: "English", short: "EN" }
 ];
+
+/** Builds an optimised Unsplash URL. All photos are used under the Unsplash License. */
+export const photo = (id: string, w = 900) =>
+  `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=70`;
 
 export const CATEGORIES: {
   value: Category;
@@ -30,62 +37,31 @@ export const CATEGORIES: {
   swLabel: string;
   image: string;
 }[] = [
-  {
-    value: "Women",
-    label: "Nguo za Wanawake",
-    swLabel: "Nguo za Wanawake",
-    image:
-      "https://images.unsplash.com/photo-1575206383204-ba39a1b8cbe5?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    value: "Men",
-    label: "Nguo za Wanaume",
-    swLabel: "Nguo za Wanaume",
-    image:
-      "https://images.unsplash.com/photo-1507473885790-e6c9a6a02f5b?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    value: "Crop Tops",
-    label: "Kropi Tops",
-    swLabel: "Vipande vya kuongeza",
-    image:
-      "https://images.unsplash.com/photo-1520417593131-1c1b9a07c0ba?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    value: "Dresses",
-    label: "Magauni",
-    swLabel: "Magauni",
-    image:
-      "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    value: "Swimwear",
-    label: "Nguo za Kuogelea",
-    swLabel: "Vifaa vya samaki",
-    image:
-      "https://images.unsplash.com/photo-1606107557195-30543607dbf5?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    value: "Shoes",
-    label: "Viatu",
-    swLabel: "Viatu",
-    image:
-      "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    value: "Accessories",
-    label: "Vifaa vya Kipekee",
-    swLabel: "Vifaa vya kujibu hisa",
-    image:
-      "https://images.unsplash.com/photo-1572635196237-14b3f281503f?auto=format&fit=crop&w=600&q=80"
-  },
-  {
-    value: "Bags",
-    label: "Mikoba",
-    swLabel: "Mikoba",
-    image:
-      "https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=600&q=80"
-  }
+  { value: "Women", label: "Women", swLabel: "Wanawake", image: photo("1531123414780-f74242c2b052", 400) },
+  { value: "Men", label: "Men", swLabel: "Wanaume", image: photo("1556452576-3e2d58536f62", 400) },
+  { value: "Dresses", label: "Dresses", swLabel: "Magauni", image: photo("1709809081557-78f803ce93a0", 400) },
+  { value: "Crop Tops", label: "Tops", swLabel: "Blauzi", image: photo("1708170236215-b6edcad7f49a", 400) },
+  { value: "Shoes", label: "Shoes", swLabel: "Viatu", image: photo("1676984030434-23f76c2d0e56", 400) },
+  { value: "Bags", label: "Bags", swLabel: "Mikoba", image: photo("1625646741211-711bdd65c570", 400) },
+  { value: "Accessories", label: "Accessories", swLabel: "Mapambo", image: photo("1760726743536-019e9e2b06b8", 400) },
+  { value: "Swimwear", label: "Beachwear", swLabel: "Mavazi ya Pwani", image: photo("1745304598502-07177a76ad8c", 400) }
+];
+
+export function categoryLabel(value: string, language: Language) {
+  const match = CATEGORIES.find((item) => item.value === value) ??
+    SHOP_CATEGORIES.find((item) => item.value === value);
+  if (!match) return value;
+  return language === "sw" ? match.swLabel : match.label;
+}
+
+/** Business types a seller can register. Includes every product category so older applications stay valid. */
+export const SHOP_CATEGORIES: { value: string; label: string; swLabel: string }[] = [
+  ...CATEGORIES.map(({ value, label, swLabel }) => ({ value, label, swLabel })),
+  { value: "Fabrics", label: "Kitenge & fabrics", swLabel: "Vitenge na vitambaa" },
+  { value: "Tailoring", label: "Tailoring", swLabel: "Ushonaji" },
+  { value: "Kids", label: "Kids' clothing", swLabel: "Nguo za watoto" },
+  { value: "Beauty", label: "Beauty & cosmetics", swLabel: "Urembo na vipodozi" },
+  { value: "Other", label: "Other", swLabel: "Nyingine" }
 ];
 
 export const SIZE_OPTIONS = [
@@ -107,22 +83,74 @@ export const SIZE_OPTIONS = [
 
 export const BRANDS = ["TRENDORA", "Zuri Wear", "Kijani Studio", "Urban Thread"];
 
-export const REGIONS: {
+export type Region = {
   id: string;
   name: string;
   fee: number;
-  eta: string;
-}[] = [
-  { id: "dar-es-salaam", name: "Dar es Salaam", fee: 7000, eta: "1 – 2 days" },
-  { id: "arusha", name: "Arusha", fee: 10000, eta: "2 – 4 days" },
-  { id: "dodoma", name: "Dodoma", fee: 10000, eta: "2 – 4 days" },
-  { id: "mwanza", name: "Mwanza", fee: 12000, eta: "3 – 5 days" },
-  { id: "mbeya", name: "Mbeya", fee: 13000, eta: "3 – 5 days" },
-  { id: "tanga", name: "Tanga", fee: 11000, eta: "2 – 4 days" },
-  { id: "morogoro", name: "Morogoro", fee: 9000, eta: "2 – 3 days" },
-  { id: "zanzibar", name: "Zanzibar", fee: 12000, eta: "2 – 4 days" },
-  { id: "other-tz", name: "Other region in Tanzania", fee: 15000, eta: "3 – 6 days" }
+  eta: [number, number];
+  /** Kept only so older orders and shops still resolve; not offered in forms. */
+  legacy?: boolean;
+};
+
+const zone = (name: string, fee: number, eta: [number, number]): Region => ({
+  id: name.toLowerCase().replace(/[^a-z]+/g, "-"),
+  name,
+  fee,
+  eta
+});
+
+/**
+ * All 31 regions of Tanzania. Delivery fees keep the store's existing pricing:
+ * regions that had their own price keep it, every other region uses the former
+ * "other region" price (TZS 15,000).
+ */
+export const REGIONS: Region[] = [
+  zone("Dar es Salaam", 7000, [1, 2]),
+  zone("Arusha", 10000, [2, 4]),
+  zone("Dodoma", 10000, [2, 4]),
+  zone("Geita", 15000, [3, 6]),
+  zone("Iringa", 15000, [3, 6]),
+  zone("Kagera", 15000, [3, 6]),
+  zone("Katavi", 15000, [3, 6]),
+  zone("Kigoma", 15000, [3, 6]),
+  zone("Kilimanjaro", 15000, [3, 6]),
+  zone("Lindi", 15000, [3, 6]),
+  zone("Manyara", 15000, [3, 6]),
+  zone("Mara", 15000, [3, 6]),
+  zone("Mbeya", 13000, [3, 5]),
+  zone("Morogoro", 9000, [2, 3]),
+  zone("Mtwara", 15000, [3, 6]),
+  zone("Mwanza", 12000, [3, 5]),
+  zone("Njombe", 15000, [3, 6]),
+  zone("Pwani", 15000, [3, 6]),
+  zone("Rukwa", 15000, [3, 6]),
+  zone("Ruvuma", 15000, [3, 6]),
+  zone("Shinyanga", 15000, [3, 6]),
+  zone("Simiyu", 15000, [3, 6]),
+  zone("Singida", 15000, [3, 6]),
+  zone("Songwe", 15000, [3, 6]),
+  zone("Tabora", 15000, [3, 6]),
+  zone("Tanga", 11000, [2, 4]),
+  zone("Kaskazini Unguja", 12000, [2, 4]),
+  zone("Kusini Unguja", 12000, [2, 4]),
+  zone("Mjini Magharibi", 12000, [2, 4]),
+  zone("Kaskazini Pemba", 12000, [2, 4]),
+  zone("Kusini Pemba", 12000, [2, 4]),
+  { ...zone("Zanzibar", 12000, [2, 4]), legacy: true },
+  { ...zone("Other region in Tanzania", 15000, [3, 6]), legacy: true }
 ];
+
+export const SELECTABLE_REGIONS = REGIONS.filter((region) => !region.legacy);
+
+export function findRegion(name: string) {
+  return REGIONS.find((region) => region.name === name);
+}
+
+export function formatEta(eta: [number, number], language: Language) {
+  return language === "sw" ? `siku ${eta[0]} – ${eta[1]}` : `${eta[0]} – ${eta[1]} days`;
+}
+
+export const INTERNATIONAL_SHIPPING_FEE = 35000;
 
 export const COUNTRIES = [
   { value: "Tanzania", label: "Tanzania", dial: "+255" },
@@ -134,35 +162,46 @@ export const COUNTRIES = [
   { value: "Malawi", label: "Malawi", dial: "+265" }
 ];
 
-export const PAYMENT_METHODS = [
+export const PAYMENT_METHODS: {
+  id: string;
+  label: { en: string; sw: string };
+  description: { en: string; sw: string };
+  available: boolean;
+}[] = [
   {
     id: "cod",
-    label: "Cash on Delivery",
-    description: "Pay in cash when your order is delivered.",
+    label: { en: "Cash on delivery", sw: "Lipa ukipokea" },
+    description: {
+      en: "Pay in cash when your order is delivered.",
+      sw: "Lipa pesa taslimu mzigo wako ukifika."
+    },
     available: true
   },
   {
     id: "mpesa",
-    label: "M-Pesa",
-    description: "Mobile money — integration pending, not active yet.",
+    label: { en: "M-Pesa", sw: "M-Pesa" },
+    description: { en: "Coming soon.", sw: "Inakuja hivi karibuni." },
     available: false
   },
   {
     id: "mixx",
-    label: "Mixx by Yas",
-    description: "Mobile money — integration pending, not active yet.",
+    label: { en: "Mixx by Yas", sw: "Mixx by Yas" },
+    description: { en: "Coming soon.", sw: "Inakuja hivi karibuni." },
     available: false
   },
   {
     id: "airtel",
-    label: "Airtel Money",
-    description: "Mobile money — integration pending, not active yet.",
+    label: { en: "Airtel Money", sw: "Airtel Money" },
+    description: { en: "Coming soon.", sw: "Inakuja hivi karibuni." },
     available: false
   },
   {
     id: "test",
-    label: "Demo test payment",
-    description: "Sandbox mode for testing checkout. No real charge is made.",
+    label: { en: "Test payment", sw: "Malipo ya majaribio" },
+    description: {
+      en: "Development only. No real money is charged.",
+      sw: "Kwa majaribio tu. Hakuna pesa halisi inayokatwa."
+    },
     available: process.env.NODE_ENV !== "production"
   }
 ];
@@ -175,29 +214,60 @@ export const ORDER_STATUSES = [
   "cancelled"
 ] as const;
 
+export const ORDER_STATUS_LABELS: Record<(typeof ORDER_STATUSES)[number], { en: string; sw: string }> = {
+  pending: { en: "Received", sw: "Imepokelewa" },
+  processing: { en: "Being prepared", sw: "Inaandaliwa" },
+  shipped: { en: "On the way", sw: "Iko njiani" },
+  completed: { en: "Delivered", sw: "Imefika" },
+  cancelled: { en: "Cancelled", sw: "Imesitishwa" }
+};
+
+export const SHOP_STATUS_LABELS: Record<string, { en: string; sw: string }> = {
+  PENDING_PAYMENT: { en: "Awaiting payment", sw: "Inasubiri malipo" },
+  PAYMENT_PROCESSING: { en: "Payment being checked", sw: "Malipo yanahakikiwa" },
+  PENDING_APPROVAL: { en: "Pending approval", sw: "Inasubiri uthibitisho" },
+  ACTIVE: { en: "Active", sw: "Duka liko hewani" },
+  REJECTED: { en: "Rejected", sw: "Ombi limekataliwa" },
+  SUSPENDED: { en: "Suspended", sw: "Limesimamishwa" },
+  EXPIRED: { en: "Expired", sw: "Muda umeisha" }
+};
+
+export const IMAGES = {
+  shopkeeper: photo("1687422808311-a776f467a468", 1600),
+  tailor: photo("1687422809069-0fa3546b8471", 1600),
+  stoneTown: photo("1695643875095-f5620748605d", 1400),
+  sewing: photo("1790943780822-9918073fe9f1", 1200),
+  vendorPhone: photo("1687422809654-579d81c29d32", 1200),
+  market: photo("1672079806571-fd202b42d22a", 1400),
+  baskets: photo("1776409933815-3497439f829a", 1200),
+  darAerial: photo("1589177900326-900782f88a55", 1600),
+  headwrap: photo("1614291129408-3dd5436942e6", 1200),
+  fabrics: photo("1768212565426-58b089b6386d", 1200),
+  beach: photo("1745304598502-07177a76ad8c", 1200),
+  menStyle: photo("1764593008195-87ca871d72bd", 1200),
+  beads: photo("1760726743536-019e9e2b06b8", 1200)
+};
+
 export const HERO_SLIDES = [
   {
     eyebrowKey: "hero.eyebrow",
     titleKey: "hero.title",
     subKey: "hero.sub",
-    image:
-      "https://images.unsplash.com/photo-1575206383204-ba39a1b8cbe5?auto=format&fit=crop&w=1400&q=85",
-    noteKey: "hero.note"
+    image: IMAGES.shopkeeper,
+    position: "object-[center_30%]"
   },
   {
     eyebrowKey: "hero.eyebrow2",
     titleKey: "hero.title2",
     subKey: "hero.sub2",
-    image:
-      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1400&q=85",
-    noteKey: "hero.note2"
+    image: IMAGES.tailor,
+    position: "object-[center_35%]"
   },
   {
     eyebrowKey: "hero.eyebrow3",
     titleKey: "hero.title3",
     subKey: "hero.sub3",
-    image:
-      "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1400&q=85",
-    noteKey: "hero.note3"
+    image: IMAGES.stoneTown,
+    position: "object-[center_55%]"
   }
-];
+] as const;

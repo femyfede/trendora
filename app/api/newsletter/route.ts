@@ -1,38 +1,29 @@
 import { NextResponse } from "next/server";
-import { mutateDb, readDb } from "@/lib/db";
+import { mutateDb } from "@/lib/db";
 import { isValidEmail } from "@/lib/utils";
+import { getTranslator } from "@/lib/i18n-server";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const { tr } = await getTranslator();
   try {
     const body = (await request.json()) as { email?: string };
     const email = String(body.email ?? "").trim().toLowerCase();
-    if (!isValidEmail(email)) {
-      return NextResponse.json(
-        { error: "Enter a valid email address." },
-        { status: 400 }
-      );
+    if (!isValidEmail(email) || email.length > 200) {
+      return NextResponse.json({ error: tr("Enter a valid email address.", "Weka barua pepe sahihi.") }, { status: 400 });
     }
 
-    const db = await readDb();
-    if (db.subscribers.some((item) => item.email === email)) {
-      return NextResponse.json({ ok: true, alreadySubscribed: true });
-    }
-
-    await mutateDb((database) => {
-      if (!database.subscribers.some((item) => item.email === email)) {
-        database.subscribers.push({
-          email,
-          createdAt: new Date().toISOString()
-        });
-      }
+    const alreadySubscribed = await mutateDb((database) => {
+      if (database.subscribers.some((item) => item.email === email)) return true;
+      database.subscribers.push({ email, createdAt: new Date().toISOString() });
+      return false;
     });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, alreadySubscribed });
   } catch {
     return NextResponse.json(
-      { error: "Could not subscribe right now." },
+      { error: tr("Could not subscribe right now. Please try again.", "Imeshindwa kujiunga sasa hivi. Tafadhali jaribu tena.") },
       { status: 500 }
     );
   }

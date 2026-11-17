@@ -13,12 +13,12 @@ export function Logo({
   return (
     <Link
       href="/"
-      aria-label="TRENDORA home"
+      aria-label="TRENDORA"
       className={cn("inline-flex items-center gap-2.5", className)}
     >
       <span
         className={cn(
-          "grid h-9 w-9 place-items-center rounded-[11px] shadow-sm",
+          "grid h-9 w-9 shrink-0 place-items-center rounded-[11px] shadow-sm",
           variant === "light" ? "bg-white" : "bg-brand-700"
         )}
         aria-hidden="true"
@@ -34,7 +34,7 @@ export function Logo({
       {showWordmark && (
         <span
           className={cn(
-            "font-display text-[1.15rem] font-extrabold tracking-[0.22em]",
+            "font-display text-[1.05rem] font-extrabold tracking-[0.12em] sm:text-[1.15rem] sm:tracking-[0.22em]",
             variant === "light" ? "text-white" : "text-ink"
           )}
         >

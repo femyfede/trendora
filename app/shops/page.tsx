@@ -1,73 +1,97 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { MapPin, Phone, Store } from "lucide-react";
+import { BadgeCheck, PhoneCall, Store } from "lucide-react";
 import { readDb } from "@/lib/db";
+import { getTranslator } from "@/lib/i18n-server";
+import { IMAGES } from "@/lib/constants";
+import { ShopsDirectory } from "@/components/shops-directory";
+import type { PublicShop } from "@/components/shop-card";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Maduka ya Tanzania",
-  description: "Gundua maduka yaliyoidhinishwa kwenye TRENDORA marketplace."
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { tr } = await getTranslator();
+  return {
+    title: tr("Verified shops in Tanzania", "Maduka yaliyothibitishwa Tanzania"),
+    description: tr(
+      "Find verified Tanzanian shops and contact them directly by phone or WhatsApp.",
+      "Pata maduka ya Tanzania yaliyothibitishwa na uwasiliane nayo moja kwa moja kwa simu au WhatsApp."
+    )
+  };
+}
 
 export default async function ShopsPage() {
-  const db = await readDb();
-  const shops = db.shops
+  const [{ tr }, db] = await Promise.all([getTranslator(), readDb()]);
+  // Only public fields are sent to the browser (no owner id, email or internal status).
+  const shops: PublicShop[] = db.shops
     .filter((shop) => shop.status === "ACTIVE")
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(({ id, name, category, description, region, district, physicalLocation, phone, whatsapp }) => ({
+      id,
+      name,
+      category,
+      description,
+      region,
+      district,
+      physicalLocation,
+      phone,
+      whatsapp
+    }));
 
   return (
-    <div className="container-shell py-10 sm:py-14">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-700">
-            Biashara zilizothibitishwa
+    <div>
+      <section className="relative overflow-hidden bg-brand-950 text-white">
+        <Image
+          src={IMAGES.stoneTown}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[center_60%] opacity-30"
+        />
+        <div className="container-shell relative py-12 sm:py-16">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-sun-400">
+            {tr("Shops directory", "Orodha ya maduka")}
           </p>
-          <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-            Maduka ya Tanzania
+          <h1 className="mt-3 max-w-2xl font-display text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
+            {tr("Verified shops across Tanzania", "Maduka yaliyothibitishwa kote Tanzania")}
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-500">
-            Wasiliana moja kwa moja na biashara zilizoidhinishwa na TRENDORA.
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-white/85">
+            {tr(
+              "Every shop here has been checked by our team. Call or WhatsApp the seller directly.",
+              "Kila duka hapa limekaguliwa na timu yetu. Mpigie au mtumie muuzaji WhatsApp moja kwa moja."
+            )}
           </p>
+          <ul className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/85">
+            <li className="flex items-center gap-2">
+              <BadgeCheck className="h-4 w-4 text-sun-400" />
+              {tr("Payment and details verified", "Malipo na taarifa zimehakikiwa")}
+            </li>
+            <li className="flex items-center gap-2">
+              <PhoneCall className="h-4 w-4 text-sun-400" />
+              {tr("Contact sellers directly", "Wasiliana na muuzaji moja kwa moja")}
+            </li>
+          </ul>
         </div>
-        <Link href="/create-shop" className="btn-primary shrink-0">
-          Fungua Duka Lako
-        </Link>
-      </div>
+      </section>
 
-      {shops.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-dashed border-zinc-300 bg-white px-5 py-14 text-center">
-          <Store className="mx-auto h-8 w-8 text-zinc-300" />
-          <h2 className="mt-3 font-display text-lg font-bold">Hakuna duka lililoidhinishwa bado</h2>
-          <p className="mt-1 text-sm text-zinc-500">
-            Maduka yataonekana hapa baada ya malipo kuhakikiwa na idhini kutolewa.
-          </p>
+      <div className="container-shell py-10 sm:py-12">
+        <ShopsDirectory shops={shops} />
+
+        <div className="mt-12 flex flex-col items-start gap-4 rounded-2xl bg-clay-50 p-6 ring-1 ring-clay-100 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div>
+            <h2 className="font-display text-xl font-extrabold">{tr("Own a shop?", "Una duka?")}</h2>
+            <p className="mt-1 text-sm text-zinc-700">
+              {tr("Get listed and reach customers across Tanzania.", "Liorodheshe hapa uwafikie wateja kote Tanzania.")}
+            </p>
+          </div>
+          <Link href="/create-shop" className="btn-accent shrink-0">
+            <Store className="h-4 w-4" />
+            {tr("Register your shop", "Sajili duka lako")}
+          </Link>
         </div>
-      ) : (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {shops.map((shop) => (
-            <article key={shop.id} className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-700">
-                <Store className="h-5 w-5" />
-              </span>
-              <h2 className="mt-4 font-display text-lg font-extrabold">{shop.name}</h2>
-              <p className="mt-1 text-xs font-semibold text-brand-700">{shop.category}</p>
-              <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-zinc-600">{shop.description}</p>
-              <p className="mt-4 flex items-start gap-2 text-xs text-zinc-500">
-                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-700" />
-                {shop.district}, {shop.region} · {shop.physicalLocation}
-              </p>
-              <a
-                href={`tel:${shop.phone.replace(/[^\d+]/g, "")}`}
-                className="mt-5 inline-flex items-center gap-2 rounded-full border border-zinc-200 px-4 py-2 text-xs font-semibold text-ink transition hover:border-brand-700 hover:text-brand-700"
-              >
-                <Phone className="h-3.5 w-3.5" />
-                Wasiliana na duka
-              </a>
-            </article>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

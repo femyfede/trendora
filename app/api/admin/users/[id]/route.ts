@@ -1,46 +1,49 @@
 import { NextResponse } from "next/server";
-import { readDb, mutateDb } from "@/lib/db";
-import { hasRole } from "@/lib/auth";
+import { mutateDb } from "@/lib/db";
+import { isAdmin } from "@/lib/auth";
+import type { UserRole } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+const ROLES: UserRole[] = ["customer", "admin", "manager"];
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Only the password-protected admin session may manage users. A user-account
+  // role alone is not enough, otherwise any account flagged "admin" could escalate.
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  let body: { isActive?: unknown; role?: unknown };
   try {
-    const auth = await hasRole("admin");
-    if (!auth) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const { id } = await params;
-    const body = (await request.json()) as { isActive?: boolean; role?: string };
-
-    const result = await mutateDb((db) => {
-      const userIndex = db.users.findIndex((u) => u.id === id);
-      if (userIndex === -1) {
-        return { error: "User not found" };
-      }
-
-      if (body.isActive !== undefined) {
-        db.users[userIndex].isActive = body.isActive;
-      }
-      if (body.role && ["customer", "admin", "manager"].includes(body.role)) {
-        db.users[userIndex].role = body.role as "customer" | "admin" | "manager";
-      }
-      db.users[userIndex].updatedAt = new Date().toISOString();
-
-      const { passwordHash, ...user } = db.users[userIndex];
-      return { user };
-    });
-
-    if ("error" in result && result.error) {
-      return NextResponse.json({ error: result.error }, { status: 404 });
-    }
-
-    return NextResponse.json({ user: result.user });
+    body = (await request.json()) as typeof body;
   } catch {
-    return NextResponse.json({ error: "Could not update user" }, { status: 500 });
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+  if (body.isActive !== undefined && typeof body.isActive !== "boolean") {
+    return NextResponse.json({ error: "isActive must be true or false." }, { status: 400 });
+  }
+  if (body.role !== undefined && !ROLES.includes(body.role as UserRole)) {
+    return NextResponse.json({ error: "Invalid role." }, { status: 400 });
+  }
+
+  try {
+    const { id } = await params;
+    const user = await mutateDb((db) => {
+      const target = db.users.find((entry) => entry.id === id);
+      if (!target) return null;
+      if (typeof body.isActive === "boolean") target.isActive = body.isActive;
+      if (body.role) target.role = body.role as UserRole;
+      target.updatedAt = new Date().toISOString();
+      const { passwordHash: _passwordHash, ...safe } = target;
+      return safe;
+    });
+    if (!user) return NextResponse.json({ error: "User not found." }, { status: 404 });
+    return NextResponse.json({ user });
+  } catch {
+    return NextResponse.json({ error: "Could not update user." }, { status: 500 });
   }
 }

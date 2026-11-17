@@ -20,10 +20,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProduct(slug);
-  if (!product) return { title: "Product not found" };
+  if (!product) return { title: "404" };
   return {
     title: product.name,
-    description: `${product.description.slice(0, 150)} Shop ${product.name} at TRENDORA with delivery across Tanzania.`,
+    description: product.description.slice(0, 160),
     openGraph: {
       title: `${product.name} | TRENDORA`,
       description: product.description.slice(0, 160),
@@ -60,7 +60,7 @@ export default async function ProductPage({
   return (
     <>
       <ProductDetail product={product} related={related} />
-      <ProductReviews productId={product.id} initialRating={product.rating} initialReviewCount={product.reviewCount} />
+      <ProductReviews productId={product.id} />
     </>
   );
 }

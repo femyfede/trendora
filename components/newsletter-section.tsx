@@ -9,7 +9,7 @@ export function NewsletterSection() {
 
   return (
     <section className="container-shell py-14 sm:py-16 lg:py-20">
-      <div className="relative overflow-hidden rounded-[1.75rem] border border-brand-100 bg-brand-50 px-6 py-12 text-center sm:rounded-[2rem] sm:px-10 sm:py-16">
+      <div className="relative overflow-hidden rounded-[1.75rem] border border-brand-100 bg-brand-50 px-5 py-12 text-center sm:rounded-[2rem] sm:px-10 sm:py-16">
         <div
           className="pointer-events-none absolute -left-16 -top-16 h-52 w-52 rounded-full border border-brand-200/70"
           aria-hidden="true"
@@ -22,7 +22,7 @@ export function NewsletterSection() {
           <span className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-white text-brand-700 shadow-sm">
             <Mail className="h-5 w-5" />
           </span>
-          <h2 className="mt-5 font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
+          <h2 className="mt-5 font-display text-2xl font-extrabold tracking-tight text-ink sm:text-4xl">
             {t("newsletter.title")}
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-zinc-600">

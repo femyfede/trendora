@@ -3,9 +3,11 @@ import { mutateDb, readDb } from "@/lib/db";
 import { getCurrentUser, isAdmin } from "@/lib/auth";
 import {
   FREE_SHIPPING_THRESHOLD,
+  INTERNATIONAL_SHIPPING_FEE,
   PAYMENT_METHODS,
-  REGIONS
+  SELECTABLE_REGIONS
 } from "@/lib/constants";
+import { getTranslator } from "@/lib/i18n-server";
 import {
   isValidEmail,
   isValidTzPhone,
@@ -56,12 +58,25 @@ export async function GET() {
   return NextResponse.json(orders);
 }
 
+const LIMITS: Record<string, number> = {
+  firstName: 60,
+  lastName: 60,
+  email: 200,
+  phone: 30,
+  country: 60,
+  region: 80,
+  city: 100,
+  address: 300,
+  notes: 500
+};
+
 export async function POST(request: Request) {
+  const { tr } = await getTranslator();
   let body: CheckoutBody;
   try {
     body = (await request.json()) as CheckoutBody;
   } catch {
-    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+    return NextResponse.json({ error: tr("Invalid request.", "Ombi si sahihi.") }, { status: 400 });
   }
 
   const customer = body.customer ?? {};
@@ -78,27 +93,33 @@ export async function POST(request: Request) {
   const missing = required.filter((key) => !String(customer[key] ?? "").trim());
   if (missing.length) {
     return NextResponse.json(
-      { error: `Please complete the required delivery details.` },
+      { error: tr("Please fill in all the delivery details.", "Tafadhali jaza taarifa zote za usafirishaji.") },
+      { status: 400 }
+    );
+  }
+  if (Object.entries(LIMITS).some(([key, max]) => String(customer[key as keyof typeof customer] ?? "").length > max)) {
+    return NextResponse.json(
+      { error: tr("Some delivery details are too long.", "Baadhi ya taarifa ni ndefu kupita kiasi.") },
       { status: 400 }
     );
   }
   if (!isValidEmail(String(customer.email))) {
-    return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+    return NextResponse.json({ error: tr("Enter a valid email address.", "Weka barua pepe sahihi.") }, { status: 400 });
   }
   if (!isValidTzPhone(String(customer.phone))) {
     return NextResponse.json(
-      { error: "Please enter a valid phone number." },
+      { error: tr("Enter a valid phone number, e.g. 0712 345 678.", "Weka namba ya simu sahihi, mfano 0712 345 678.") },
       { status: 400 }
     );
   }
-  if (!Array.isArray(body.items) || body.items.length === 0) {
-    return NextResponse.json({ error: "Your cart is empty." }, { status: 400 });
+  if (!Array.isArray(body.items) || body.items.length === 0 || body.items.length > 50) {
+    return NextResponse.json({ error: tr("Your cart is empty.", "Kikapu chako hakina kitu.") }, { status: 400 });
   }
 
   const method = PAYMENT_METHODS.find((item) => item.id === body.paymentMethod);
   if (!method || !method.available) {
     return NextResponse.json(
-      { error: "That payment method is not available yet." },
+      { error: tr("That payment method is not available yet.", "Njia hiyo ya malipo bado haipatikani.") },
       { status: 400 }
     );
   }
@@ -111,20 +132,32 @@ export async function POST(request: Request) {
     for (const item of body.items ?? []) {
       const product = db.products.find((entry) => entry.id === item.productId);
       if (!product || !product.isActive)
-        return { status: 404, error: "A product in your cart is no longer available." };
+        return {
+          status: 404,
+          error: tr(
+            "A product in your cart is no longer available. Please remove it and try again.",
+            "Bidhaa moja kwenye kikapu chako haipatikani tena. Iondoe kisha ujaribu tena."
+          )
+        };
 
       const size = String(item.size ?? "");
       const color = String(item.color ?? "");
       if (!product.sizes.includes(size))
-        return { status: 400, error: `Please choose a valid size for ${product.name}.` };
+        return { status: 400, error: tr(`Choose a valid size for ${product.name}.`, `Chagua ukubwa sahihi wa ${product.name}.`) };
       if (!product.colors.some((entry) => entry.name === color))
-        return { status: 400, error: `Please choose a valid colour for ${product.name}.` };
+        return { status: 400, error: tr(`Choose a valid colour for ${product.name}.`, `Chagua rangi sahihi ya ${product.name}.`) };
 
       const qty = Math.max(1, Math.min(99, Math.floor(Number(item.qty) || 1)));
-      if (qty > product.stock)
+      const alreadyInOrder = items
+        .filter((entry) => entry.productId === product.id)
+        .reduce((total, entry) => total + entry.qty, 0);
+      if (qty + alreadyInOrder > product.stock)
         return {
           status: 409,
-          error: `Only ${product.stock} of ${product.name} available in that size.`
+          error: tr(
+            `Only ${product.stock} of ${product.name} left. Please reduce the quantity.`,
+            `Zimebaki ${product.stock} tu za ${product.name}. Tafadhali punguza idadi.`
+          )
         };
 
       items.push({
@@ -149,18 +182,18 @@ export async function POST(request: Request) {
           entry.code.toUpperCase() === String(body.discountCode).trim().toUpperCase()
       );
       if (!discount)
-        return { status: 400, error: "That discount code is no longer valid." };
+        return { status: 400, error: tr("That discount code is no longer valid.", "Kuponi hiyo haifanyi kazi tena.") };
     }
 
     const discountAmount = discount
       ? Math.round((subtotal * discount.percent) / 100)
       : 0;
 
-    let baseShipping = 35000;
+    let baseShipping = INTERNATIONAL_SHIPPING_FEE;
     if (customer.country === "Tanzania") {
-      const region = REGIONS.find((entry) => entry.name === customer.region);
+      const region = SELECTABLE_REGIONS.find((entry) => entry.name === customer.region);
       if (!region)
-        return { status: 400, error: "Choose a delivery region in Tanzania." };
+        return { status: 400, error: tr("Choose your delivery region.", "Chagua mkoa wa kupelekewa mzigo.") };
       baseShipping = region.fee;
     }
 
@@ -211,7 +244,8 @@ export async function POST(request: Request) {
   }
 
   const order = result.order!;
-  await sendOrderConfirmationEmail(order);
+  // The order is saved; an email failure must not report the checkout as failed.
+  await sendOrderConfirmationEmail(order).catch(() => undefined);
 
   const { accessTokenHash, ...publicOrder } = order;
   return NextResponse.json({ order: publicOrder, accessToken }, { status: 201 });

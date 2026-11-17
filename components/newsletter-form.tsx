@@ -36,14 +36,14 @@ export function NewsletterForm({
         body: JSON.stringify({ email })
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Something went wrong.");
+      if (!response.ok) throw new Error(data.error || t("common.error"));
       setStatus("success");
-      setMessage(t("newsletter.success"));
+      setMessage(data.alreadySubscribed ? t("newsletter.already") : t("newsletter.success"));
       setEmail("");
     } catch (error) {
       setStatus("error");
       setMessage(
-        error instanceof Error ? error.message : "Could not subscribe. Try again."
+        error instanceof TypeError ? t("common.network") : error instanceof Error ? error.message : t("common.error")
       );
     }
   };
@@ -68,10 +68,13 @@ export function NewsletterForm({
           className={cn(
             "min-w-0 flex-1 rounded-full border px-5 py-3 text-sm outline-none transition",
             dark
-              ? "border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:border-white/60"
+              ? "border-white/20 bg-white/10 text-white placeholder:text-white/60 focus:border-white/60"
               : "border-zinc-200 bg-white text-ink placeholder:text-zinc-400 focus:border-brand-600 focus:ring-2 focus:ring-brand-600/15"
           )}
           aria-describedby={`newsletter-status-${id}`}
+          aria-invalid={status === "error"}
+          autoComplete="email"
+          inputMode="email"
         />
         <button
           type="submit"
@@ -107,13 +110,13 @@ export function NewsletterForm({
           </p>
         )}
         {status === "error" && (
-          <p className="mt-3 text-xs font-medium text-red-500">{message}</p>
+          <p role="alert" className={cn("mt-3 text-xs font-medium", dark ? "text-red-300" : "text-red-600")}>{message}</p>
         )}
         {status === "idle" && (
           <p
             className={cn(
               "mt-3 text-xs",
-              dark ? "text-white/45" : "text-zinc-500"
+              dark ? "text-white/55" : "text-zinc-500"
             )}
           >
             {t("newsletter.privacy")}
