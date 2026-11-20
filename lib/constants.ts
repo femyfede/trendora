@@ -245,7 +245,10 @@ export const IMAGES = {
   fabrics: photo("1768212565426-58b089b6386d", 1200),
   beach: photo("1745304598502-07177a76ad8c", 1200),
   menStyle: photo("1764593008195-87ca871d72bd", 1200),
-  beads: photo("1760726743536-019e9e2b06b8", 1200)
+  beads: photo("1760726743536-019e9e2b06b8", 1200),
+  // Home page hero slides: clothing for sale.
+  heroBoutique: photo("1567401893414-76b7b1e5a7a5", 1600),
+  heroFabrics: photo("1768212565426-58b089b6386d", 1600)
 };
 
 export const HERO_SLIDES = [
@@ -253,8 +256,8 @@ export const HERO_SLIDES = [
     eyebrowKey: "hero.eyebrow",
     titleKey: "hero.title",
     subKey: "hero.sub",
-    image: IMAGES.shopkeeper,
-    position: "object-[center_30%]"
+    image: IMAGES.heroBoutique,
+    position: "object-[center_40%]"
   },
   {
     eyebrowKey: "hero.eyebrow2",
@@ -267,7 +270,7 @@ export const HERO_SLIDES = [
     eyebrowKey: "hero.eyebrow3",
     titleKey: "hero.title3",
     subKey: "hero.sub3",
-    image: IMAGES.stoneTown,
-    position: "object-[center_55%]"
+    image: IMAGES.heroFabrics,
+    position: "object-[center_50%]"
   }
 ] as const;

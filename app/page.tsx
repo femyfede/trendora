@@ -15,7 +15,10 @@ export default async function HomePage() {
 
   const bestSellers = active.filter((product) => product.isBestSeller).slice(0, 4);
   const fallbackBest = [...active].sort((a, b) => b.sold - a.sold).slice(0, 4);
-  const newArrivals = [...active]
+  // Products hidden from the home page "New arrivals" section (still listed in the shop).
+  const hiddenFromNewArrivals = new Set(["p-onepiece"]);
+  const newArrivals = active
+    .filter((product) => !hiddenFromNewArrivals.has(product.id))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4);
 
